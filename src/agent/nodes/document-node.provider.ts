@@ -23,9 +23,18 @@ export const DocumentNodeProvider: Provider = {
       `)
       const structuredModel = model.withStructuredOutput(documentResultChema)
       messages.push(newMessage)
-      const response = await structuredModel.invoke(messages)
-      const result = documentResultChema.parse(response)
-      return { documents: result.documents }
+      const max_retries = 5
+      //TODO: добавить обработку ошибки валидации схемы
+      for (let i = 0; i < max_retries; i++) {
+        const response = await structuredModel.invoke(messages)
+        try {
+          const result = documentResultChema.parse(response)
+          return result
+        } catch (error) {
+          continue
+          //продолжаем попытки получить корректный ответ
+        }
+      }
     }
   }
 }
