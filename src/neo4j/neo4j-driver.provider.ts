@@ -23,5 +23,6 @@ export const Neo4jDriverProvider: Provider = {
     driver.verifyConnectivity() 
 
     return driver
-  }
+  },
+  inject: [ConfigService]
 }

@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { CreateChatDto } from "./dto/create-chat.dto";
-import { User } from "src/db/postgres/entities/user.entity";
-import { Chat } from "src/db/postgres/entities/chat.entity";
+import { User } from "src/postgres/entities/user.entity";
+import { Chat } from "src/postgres/entities/chat.entity";
 import { ChatDto } from "./dto/chat.dto";
 
 
@@ -10,7 +10,7 @@ export class ChatMapper {
 
   toEntity(createChatDto: CreateChatDto, chatUser: User) {
     const chat = new Chat()
-    chat.title = createChatDto.title
+    chat.title = "Новый чат"
     chat.user = chatUser
     return chat
   }

@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Chat } from "src/db/postgres/entities/chat.entity";
-import { User } from "src/db/postgres/entities/user.entity";
+import { Chat } from "src/postgres/entities/chat.entity";
+import { User } from "src/postgres/entities/user.entity";
 import { DataSource, EntityNotFoundError, Repository } from "typeorm";
 import { CreateChatDto } from "./dto/create-chat.dto";
 import { ChatMapper } from "./chat.mapper";

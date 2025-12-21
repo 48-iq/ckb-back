@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { Chat } from "src/db/postgres/entities/chat.entity";
-import { User } from "src/db/postgres/entities/user.entity";
+import { Chat } from "src/postgres/entities/chat.entity";
+import { User } from "src/postgres/entities/user.entity";
 import { ChatService } from "./chat.service";
 import { ChatController } from "./chat.controller";
 import { ChatMapper } from "./chat.mapper";
