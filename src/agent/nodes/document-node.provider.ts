@@ -8,7 +8,7 @@ import { HumanMessage } from "@langchain/core/messages"
 export const DOCUMENT_NODE = 'DOCUMENT_NODE'
 
 const documentResultChema = z.object({
-  documents: z.array(z.string()).describe("список названий документов"),
+  documents: z.array(z.string()).describe("список названий документов (Document.name)"),
 })
 
 export const DocumentNodeProvider: Provider = {
@@ -24,7 +24,6 @@ export const DocumentNodeProvider: Provider = {
       const structuredModel = model.withStructuredOutput(documentResultChema)
       messages.push(newMessage)
       const max_retries = 5
-      //TODO: добавить обработку ошибки валидации схемы
       for (let i = 0; i < max_retries; i++) {
         const response = await structuredModel.invoke(messages)
         try {
@@ -35,6 +34,8 @@ export const DocumentNodeProvider: Provider = {
           //продолжаем попытки получить корректный ответ
         }
       }
+      //если не удалось получить корректный ответ
+      return { documents: ['Ошибка получения списка документов'] }
     }
   }
 }
