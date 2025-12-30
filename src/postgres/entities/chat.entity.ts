@@ -12,6 +12,9 @@ export class Chat {
   @Column()
   title: string
 
+  @Column()
+  isNew: boolean
+
   @CreateDateColumn()
   createdAt: Date
 

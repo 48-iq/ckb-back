@@ -8,6 +8,7 @@ export const AGENT_MODEL = "AGENT_MODEL"
 
 export const AgentModelProvider: Provider = {
   provide: AGENT_MODEL,
+  inject: [ConfigService],
   useFactory: async (configService: ConfigService) => {
     return new GigaChat({
       credentials: configService.get<string>('GIGACHAT_API_KEY')!,
@@ -18,5 +19,4 @@ export const AgentModelProvider: Provider = {
       timeout: 600
     })
   },
-  inject: [ConfigService]
 }

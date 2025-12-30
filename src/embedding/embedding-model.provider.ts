@@ -8,6 +8,7 @@ export const EMBEDDING_MODEL = "EMBEDDING_MODEL"
 
 export const EmbeddingModelProvider: Provider = {
   provide: EMBEDDING_MODEL,
+  inject: [ConfigService],
   useFactory: async (configService: ConfigService) => {
     return new GigaChatEmbeddings({
       credentials: configService.get<string>('GIGACHAT_API_KEY')!,
@@ -16,5 +17,4 @@ export const EmbeddingModelProvider: Provider = {
       httpsAgent: new Agent({ rejectUnauthorized: false })
     })
   },
-  inject: [ConfigService]
 }

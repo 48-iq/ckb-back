@@ -7,3 +7,4 @@ export class MessageDto {
   documents?: string[]
   chatId: string
 }
+

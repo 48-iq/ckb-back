@@ -8,7 +8,7 @@ export class Document {
   @PrimaryGeneratedColumn('uuid')
   id: string
 
-  title: string
+  name: string
 
   @ManyToOne(() => Message, message => message.documents)
   message: Message

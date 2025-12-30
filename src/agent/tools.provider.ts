@@ -10,6 +10,7 @@ export const AGENT_TOOLS = "AGENT_TOOLS"
 
 export const toolsProvider: Provider = {
   provide: AGENT_TOOLS,
+  inject: [Neo4jRepository, EmbeddingService],
   useFactory: async (
     neo4jRepository: Neo4jRepository,
     embeddingService: EmbeddingService

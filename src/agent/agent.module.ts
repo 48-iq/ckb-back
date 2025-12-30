@@ -7,17 +7,21 @@ import { DocumentNodeProvider } from "./nodes/document-node.provider";
 import { PlanNodeProvider } from "./nodes/plan-node.provider";
 import { ResultNodeProvider } from "./nodes/result-node.provider";
 import { ToolNodeProvider } from "./nodes/tool-node.provider";
+import { AgentService } from "./agent.service";
+import { Neo4jModule } from "src/neo4j/neo4j.module";
 
 
 @Module({
-  imports: [ConfigModule, EmbeddingModule],
+  imports: [ConfigModule, EmbeddingModule, Neo4jModule],
   providers: [
     AgentModelProvider, 
     AgentNodeProvider, 
     DocumentNodeProvider,
     PlanNodeProvider,
     ResultNodeProvider,
-    ToolNodeProvider
+    ToolNodeProvider,
+    AgentService
   ],
+  exports: [AgentService]
 })
 export class AgentModule {}
