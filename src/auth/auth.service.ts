@@ -11,13 +11,34 @@ export class AuthService {
     this.secret = configService.get<string>('JWT_SECRET')
   }
 
-  generateToken(metadata: Map<string, string>) {
+  _generateToken(metadata: Map<string, string>) {
     const metadataObject = Object.fromEntries(metadata)
-    const token = jwt.sign(
+    return jwt.sign(
       metadataObject,
       this.secret,
       { algorithm: "HS256" }
     )
   }
+
+  _validateToken(token: string, requiredData: string[]) {
+    jwt.verify(token, this.secret, { algorithms: ["HS256"] }, (err, payload) => {
+      
+    })
+  
+    
+  }
+
+  generateTokenForUser(userId: string) {
+    const metadata = new Map<string, string>([
+      ["userId", userId]
+    ])
+    return this._generateToken(metadata)
+  }
+
+  validateUserToken() {
+    const m
+  }
+
+
   
 }
