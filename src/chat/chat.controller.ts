@@ -3,11 +3,13 @@ import { ChatService } from "./chat.service"
 import { NewMessageDto } from "./dto/new-message"
 
 
-@Controller("api/chats")
+@Controller("/api/chats")
 export class ChatController {
 
   constructor(
     @Inject()
     private readonly chatService: ChatService
   ) {}
+
+  
 }

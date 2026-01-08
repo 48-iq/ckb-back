@@ -1,10 +1,10 @@
-import { Inject, Injectable, OnApplicationBootstrap, OnApplicationShutdown } from "@nestjs/common"
-import { Driver, int, Integer, Transaction } from "neo4j-driver"
-import { NodeType } from "./node-type.type"
-import { NewDocument } from "./new-document.interface"
-import { SavedDocument } from "./saved-document.interface"
-import { Node } from "./node.entity"
-import { NodeNotFoundError } from "./node-not-found.error"
+import { Inject, Injectable, OnApplicationBootstrap, OnApplicationShutdown } from "@nestjs/common";
+import { Driver, int, Integer, Transaction } from "neo4j-driver";
+import { NodeType } from "./node-type.type";
+import { NewDocument } from "./new-document.interface";
+import { SavedDocument } from "./saved-document.interface";
+import { Node } from "./node.entity";
+import { NodeNotFoundError } from "./node-not-found.error";
 
 @Injectable()
 export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBootstrap {
@@ -12,8 +12,7 @@ export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBoot
     @Inject('NEO4J_DRIVER') private readonly driver: Driver
   ) {}
   async onApplicationBootstrap() {
-    const session = this.driver.session()
-
+    const session = this.driver.session();
     try {
       await session.run(`
         CREATE VECTOR INDEX node_embedding_index 
@@ -23,14 +22,14 @@ export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBoot
           \`vector.dimensions\`: 2560,
           \`vector.similarity_function\`: "cosine"
         }}  
-      `)
+      `);
     } finally {
-      session.close()
+      session.close();
     }
   }
 
   async onApplicationShutdown(signal?: string) {
-    await this.driver.close()
+    await this.driver.close();
   }
 
   private async _genId(tx: Transaction) {
@@ -39,7 +38,7 @@ export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBoot
         ON CREATE SET s.sequence = 0
         SET s.sequence = s.sequence + 1
         RETURN s.sequence as sequence;
-      `)
+      `);
     return result.records.map(r => r.get("sequence"))[0];
   }
 
@@ -51,10 +50,7 @@ export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBoot
       MATCH (p {id: $parentNodeId})
       MATCH (n {id: $nodeId})
       MERGE (p)-[:HAS]->(n)
-    `, {
-      parentNodeId,
-      nodeId
-    })
+    `, { parentNodeId, nodeId });
   }
 
   private async _saveNode(tx: Transaction, params: {
@@ -109,7 +105,7 @@ export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBoot
           data: newDocument.contract.name,
           embedding: newDocument.contract.nameEmbedding,
           type: "Contract"
-        })
+        });
   
         const savedDocument = await this._saveNode(tx, {
           name: newDocument.name,
@@ -117,7 +113,7 @@ export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBoot
           embedding: newDocument.nameEmbedding,
           type: "Document",
           parentNodeId: savedContract.id
-        })
+        });
   
         const savedPages = await Promise.all(newDocument.pages.map(async (page) => {
           const savedPage = await this._saveNode(tx, {
@@ -126,7 +122,7 @@ export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBoot
             embedding: page.textEmbedding,
             type: "Page",
             parentNodeId: savedDocument.id
-          })
+          });
           const savedParagraphs = await Promise.all(page.paragraphs.map(async (paragraph) => {
             const savedParagraph = await this._saveNode(tx, {
               data: paragraph.text,
@@ -134,7 +130,7 @@ export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBoot
               embedding: paragraph.textEmbedding,
               type: "Paragraph",
               parentNodeId: savedPage.id
-            })
+            });
             const savedFacts = await Promise.all(paragraph.facts.map(async (fact) => {
               const savedFact = await this._saveNode(tx, {
                 data: fact.text,
@@ -142,7 +138,7 @@ export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBoot
                 embedding: fact.textEmbedding,
                 type: "Fact",
                 parentNodeId: savedParagraph.id
-              })
+              });
               const savedEntities = await Promise.all(fact.entities.map(async (entity) => {
                 const savedEntity = await this._saveNode(tx, {
                   data: entity.name,

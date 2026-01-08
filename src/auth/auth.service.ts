@@ -1,44 +1,36 @@
-import { Inject, Injectable } from "@nestjs/common"
-import { ConfigService } from "@nestjs/config"
-import jwt from "jsonwebtoken"
+import { Inject, Injectable } from "@nestjs/common";
+import { JwtService } from "./jwt.service";
+import { UserService } from "./user.service";
+import { ConfigService } from "@nestjs/config";
+import { LoginDto } from "./dto/login.dto";
+import { JwtDto } from "./dto/jwt.dto";
+import bcrypt from "bcryptjs";
+import { AppError } from "src/app.error";
+
+
 @Injectable()
 export class AuthService {
 
-  private readonly secret
   constructor(
-    @Inject() configService: ConfigService 
-  ) {
-    this.secret = configService.get<string>('JWT_SECRET')
+    @Inject() private readonly jwtService: JwtService,
+    @Inject() private readonly userService: UserService,
+    @Inject() private readonly configService: ConfigService
+  ) {}
+
+  async login(loginDto: LoginDto): Promise<JwtDto> {
+    const user = await this.userService.findOneByUsername(loginDto.username);
+    this._verifyPassword(user.password, loginDto.password);
+    const token = await this.jwtService.generateTokenForUser(user.id);
+    return { jwt: token };
   }
 
-  _generateToken(metadata: Map<string, string>) {
-    const metadataObject = Object.fromEntries(metadata)
-    return jwt.sign(
-      metadataObject,
-      this.secret,
-      { algorithm: "HS256" }
-    )
+  _verifyPassword(userPassword: string, enteredPassword: string) {
+    const result = bcrypt.compareSync(enteredPassword, userPassword);
+    if (!result) throw new AppError("INCORRECT_PASSWORD");
   }
 
-  _validateToken(token: string, requiredData: string[]) {
-    jwt.verify(token, this.secret, { algorithms: ["HS256"] }, (err, payload) => {
-      
-    })
-  
-    
+  encodePassword(password: string) {
+    const salt = bcrypt.genSaltSync(10);
+    return bcrypt.hashSync(password, salt);
   }
-
-  generateTokenForUser(userId: string) {
-    const metadata = new Map<string, string>([
-      ["userId", userId]
-    ])
-    return this._generateToken(metadata)
-  }
-
-  validateUserToken() {
-    const m
-  }
-
-
-  
 }

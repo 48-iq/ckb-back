@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { AppError, AppErrors } from "src/app.error";
 import { User } from "src/postgres/entities/user.entity";
 import { Repository } from "typeorm";
 
@@ -11,6 +12,8 @@ export class UserService {
   ) {}
 
   async findOneByUsername(username: string) {
-    return this.userRepository.findOneByOrFail({ username })
+    const user = await this.userRepository.findOneBy({ username });
+    if (!user) throw new AppError("USER_NOT_FOUND");
+    return user;
   }
 }

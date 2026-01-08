@@ -14,7 +14,14 @@ import { ChatModule } from './chat/chat.module'
         POSTGRES_USER: Joi.string().required(),
         POSTGRES_PASSWORD: Joi.string().required(),
         POSTGRES_DB: Joi.string().required(),
-        GIGACHAT_API_KEY: Joi.string().required()
+        GIGACHAT_API_KEY: Joi.string().required(),
+        JWT_SECRET: Joi.string().required(),
+        JWT_ISSUER: Joi.string().required(),
+        JWT_AUDIENCE: Joi.string().required(),
+        JWT_ALGORITHM: Joi.string().required(),
+        NEO4J_URL: Joi.string().required(),
+        NEO4J_USER: Joi.string().required(),
+        NEO4J_PASSWORD: Joi.string().required()
       })
     }),
     TypeOrmModule.forRootAsync({
