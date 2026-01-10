@@ -33,6 +33,8 @@ export const AppErrors = {
   PERMISSION_DENIED: {httpCode: HttpStatus.FORBIDDEN, message: 'Permission denied'},
   INCORRECT_DATA: {httpCode: HttpStatus.BAD_REQUEST, message: 'Incorrect data'},
   SAVE_FILE_ERROR: {httpCode: HttpStatus.INTERNAL_SERVER_ERROR, message: 'Save file error'},
+  GET_FILE_ERROR: {httpCode: HttpStatus.INTERNAL_SERVER_ERROR, message: 'Get file error'},
+  FILE_NOT_FOUND: {httpCode: HttpStatus.NOT_FOUND, message: 'File not found'},
 } as const satisfies Record<string, AppErrorDescriptor>
 
 

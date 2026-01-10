@@ -26,4 +26,13 @@ export class MinioRepository implements OnApplicationBootstrap {
       throw new AppError("SAVE_FILE_ERROR", e);
     }
   }
+
+  async getDocument(filename: string) {
+    try {
+      const result = await this.minio.getObject(this.documentsBacketName, filename);
+      return result;
+    } catch (e) {
+      throw new AppError("SAVE_FILE_ERROR", e);
+    }
+  }
 }
