@@ -1,0 +1,11 @@
+services:
+  app:
+    build: .
+    ports:
+      - 8080:3000
+    environment:
+      - GIGACHAT_API_KEY=value
+      - JWT_SECRET=value
+
+  gotenberg:
+    image: gotenberg/gotenberg:8

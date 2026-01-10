@@ -15,8 +15,6 @@ lerna-debug.log*
 # OS
 .DS_Store
 
-#dev compose
-compose.yml
 
 # Tests
 /coverage
