@@ -7,7 +7,7 @@ export interface AppErrorDescriptor {
 }
 
 
-export class AppError extends Error implements AppErrorDescriptor{
+export class AppError extends Error implements AppErrorDescriptor {
 
   httpCode: number
 

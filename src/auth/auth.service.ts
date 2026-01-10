@@ -1,7 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { JwtService } from "./jwt.service";
 import { UserService } from "./user.service";
-import { ConfigService } from "@nestjs/config";
 import { LoginDto } from "./dto/login.dto";
 import { JwtDto } from "./dto/jwt.dto";
 import bcrypt from "bcryptjs";
@@ -14,7 +13,6 @@ export class AuthService {
   constructor(
     @Inject() private readonly jwtService: JwtService,
     @Inject() private readonly userService: UserService,
-    @Inject() private readonly configService: ConfigService
   ) {}
 
   async login(loginDto: LoginDto): Promise<JwtDto> {

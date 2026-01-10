@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config'
 import { TypeOrmModule } from '@nestjs/typeorm'
 import Joi from 'joi'
 import { ChatModule } from './chat/chat.module'
+import { AuthModule } from './auth/auth.module'
 
 @Module({
   imports: [
@@ -42,7 +43,8 @@ import { ChatModule } from './chat/chat.module'
         }
       }
     }),
-    ChatModule
+    ChatModule,
+    AuthModule,
   ],
 })
 export class AppModule {}
