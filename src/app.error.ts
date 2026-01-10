@@ -11,6 +11,8 @@ export class AppError extends Error implements AppErrorDescriptor {
 
   httpCode: number;
 
+  errorType: AppErrorType;
+
   causeError?: Error;
 
   constructor(reason: AppErrorType, e?: Error) {
@@ -18,6 +20,7 @@ export class AppError extends Error implements AppErrorDescriptor {
     super(appErrorData.message);
     this.httpCode = appErrorData.httpCode;
     this.causeError = e;
+    this.errorType = reason;
   }
 }
 

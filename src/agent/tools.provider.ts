@@ -1,12 +1,12 @@
-import { tool } from "@langchain/core/tools"
-import { Provider } from "@nestjs/common"
-import { EmbeddingService } from "src/embedding/embedding.service"
-import { Neo4jRepository } from "src/neo4j/neo4j.repository"
-import { NodeNotFoundError } from "src/neo4j/node-not-found.error"
-import { z } from "zod"
+import { tool } from "@langchain/core/tools";
+import { Provider } from "@nestjs/common";
+import { EmbeddingService } from "src/embedding/embedding.service";
+import { Neo4jRepository } from "src/neo4j/neo4j.repository";
+import { NodeNotFoundError } from "src/neo4j/node-not-found.error";
+import { z } from "zod";
 
 
-export const AGENT_TOOLS = "AGENT_TOOLS"
+export const AGENT_TOOLS = "AGENT_TOOLS";
 
 export const toolsProvider: Provider = {
   provide: AGENT_TOOLS,
@@ -20,8 +20,9 @@ export const toolsProvider: Provider = {
         query: string
         page: number,
       }) => {
-        const embedding = await embeddingService.getEmbedding(params.query)
-        const result = neo4jRepository.vectorSearch(embedding, params.page)
+        const embedding = await embeddingService.getEmbedding(params.query);
+        const result = neo4jRepository.vectorSearch(embedding, params.page);
+        return result;
       }, {
         name: "vector_search",
         description: "Постраничный векторный поиск близких по контексту узлов " + 
@@ -38,10 +39,11 @@ export const toolsProvider: Provider = {
         id: number
       }) =>{
         try {
-          return await neo4jRepository.getNodeById(params.id)
+          const result = await neo4jRepository.getNodeById(params.id);
+          return result;
         } catch(err) {
           if (err instanceof NodeNotFoundError) {
-            return `узел с id ${params.id} не найден, проверьте id и попробуйте ещё раз`
+            return `узел с id ${params.id} не найден, проверьте id и попробуйте ещё раз`;
           }
         }
       }, {
@@ -58,14 +60,15 @@ export const toolsProvider: Provider = {
         id: number
       }) => {
         try {
-          const node = await neo4jRepository.getNodeById(params.id)
-          if (node.data.length > 1000) {
-            node.data = node.data.slice(0, 500) + "...длинные данные"
+          const sliceLength = 500;
+          const node = await neo4jRepository.getNodeById(params.id);
+          if (node.data.length > sliceLength) {
+            node.data = node.data.slice(0, sliceLength) + "...длинные данные";
           }
-          return node
+          return node;
         } catch(err) {
           if (err instanceof NodeNotFoundError) {
-            return `узел с id ${params.id} не найден, проверьте id и попробуйте ещё раз`
+            return `узел с id ${params.id} не найден, проверьте id и попробуйте ещё раз`;
           }
         }
       }, {
@@ -78,4 +81,4 @@ export const toolsProvider: Provider = {
       }
     )
   ]
-}
+};

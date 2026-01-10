@@ -16,7 +16,7 @@ export default class ChatsTable1766060236401 implements MigrationInterface {
           REFERENCES "users"("id")
           ON DELETE SET NULL
       );
-    `)
+    `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

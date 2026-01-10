@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity, JoinTable, ManyToMany, ManyToOne, PrimaryGeneratedColumn } from "typeorm"
 import { Message } from "./message.entity"
 
 
@@ -6,10 +6,12 @@ import { Message } from "./message.entity"
 export class Document {
   
   @PrimaryGeneratedColumn('uuid')
-  id: string
+  id: string;
 
-  name: string
+  @Column()
+  filename: string;
 
-  @ManyToOne(() => Message, message => message.documents)
-  message: Message
+  @ManyToMany(() => Message)
+  @JoinTable()
+  message: Message[];
 }

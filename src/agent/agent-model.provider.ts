@@ -19,4 +19,4 @@ export const AgentModelProvider: Provider = {
       timeout: 600
     })
   },
-}
+};

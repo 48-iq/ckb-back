@@ -1,11 +1,11 @@
-import { Inject, Injectable } from "@nestjs/common"
-import { AGENT_NODE } from "./nodes/agent-node.provider"
-import { DOCUMENT_NODE } from "./nodes/document-node.provider"
-import { StateGraph, START, END, CompiledStateGraph, StateType, CompiledGraph } from "@langchain/langgraph"
-import { State } from "./agent.state"
-import { PLAN_NODE } from "./nodes/plan-node.provider"
-import { RESULT_NODE } from "./nodes/result-node.provider"
-import { TOOL_NODE } from "./nodes/tool-node.provider"
+import { Inject, Injectable } from "@nestjs/common";
+import { AGENT_NODE } from "./nodes/agent-node.provider";
+import { DOCUMENT_NODE } from "./nodes/document-node.provider";
+import { StateGraph, START, END, CompiledStateGraph, StateType, CompiledGraph } from "@langchain/langgraph";
+import { State } from "./agent.state";
+import { PLAN_NODE } from "./nodes/plan-node.provider";
+import { RESULT_NODE } from "./nodes/result-node.provider";
+import { TOOL_NODE } from "./nodes/tool-node.provider";
 
 @Injectable()
 export class AgentService {
@@ -14,7 +14,7 @@ export class AgentService {
     typeof State.State,
     Partial<typeof State.State>,
     string
-  >
+  >;
 
   constructor(
     @Inject(PLAN_NODE) private readonly planNode,
@@ -43,14 +43,14 @@ export class AgentService {
       .addEdge(START, "planNode")
       .addEdge("planNode", "agentNode")
       .addConditionalEdges("agentNode", shouldContinueEdge)
-      .addEdge(documentNode, END).compile()
+      .addEdge(documentNode, END).compile();
   }
 
   
   async run(userQuery: string) {
     return await this.agent.stream(
       {userQuery}, {streamMode: ["custom", "updates"]},
-    )
+    );
   }
   
 }

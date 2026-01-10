@@ -1,13 +1,13 @@
-import { Provider } from "@nestjs/common"
-import { AGENT_MODEL } from "../agent-model.provider"
-import { GigaChat } from "langchain-gigachat"
-import { State } from "../agent.state"
-import { LangGraphRunnableConfig } from "@langchain/langgraph"
-import { HumanMessage } from "@langchain/core/messages"
+import { Provider } from "@nestjs/common";
+import { AGENT_MODEL } from "../agent-model.provider";
+import { GigaChat } from "langchain-gigachat";
+import { State } from "../agent.state";
+import { LangGraphRunnableConfig } from "@langchain/langgraph";
+import { HumanMessage } from "@langchain/core/messages";
 
 
 
-export const RESULT_NODE = 'RESULT_NODE'
+export const RESULT_NODE = 'RESULT_NODE';
 
 export const ResultNodeProvider: Provider = {
   provide: RESULT_NODE,
@@ -27,10 +27,10 @@ export const ResultNodeProvider: Provider = {
         - согласно пункту 3, 100000 рублей ушло на материалы.
 
         Строго следуй заданному формату.
-      `
+      `;
       const stream = await model.stream([...messages, new HumanMessage(resultQueryText)]);
 
-      let res = ""
+      let res = "";
 
       for await (const chunk of stream) {
         if (!chunk.content) continue

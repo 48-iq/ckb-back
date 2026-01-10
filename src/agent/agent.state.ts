@@ -1,15 +1,16 @@
 import { BaseMessage } from "@langchain/core/messages"
 import { Annotation } from "@langchain/langgraph"
+import { Message } from "src/postgres/entities/message.entity";
 
 const State = Annotation.Root({
   messages: Annotation<BaseMessage[]>({
     reducer: (prev, next) => prev.concat(next),
     default: () => []
   }),
-  userQuery: Annotation<string>,
   result: Annotation<string>,
   plan: Annotation<string>,
-  documents: Annotation<string[]>
-})
+  documents: Annotation<string[]>,
+  previousMessages: Annotation<Message[]>,
+}); // TODO: убранно поле запроса пользователя, заместо этого создано поле previousMessages, переделать агента, для поддержки контекста
 
-export { State }
+export { State };

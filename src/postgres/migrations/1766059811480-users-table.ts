@@ -13,7 +13,7 @@ export default class UsersTable1766059811480 implements MigrationInterface {
           CONSTRAINT "PK_users_id" PRIMARY KEY ("id"),
           CONSTRAINT "UQ_users_username" UNIQUE ("username")
       );
-    `)
+    `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

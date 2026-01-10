@@ -6,19 +6,16 @@ export class DocumentsTable1766069304377 implements MigrationInterface {
     await queryRunner.query(`
       CREATE TABLE "documents" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
-        "name" text NOT NULL,
-        "chatId" uuid,
-        CONSTRAINT "PK_message_id" PRIMARY KEY ("id"),
-        CONSTRAINT "FK_message_chat" FOREIGN KEY ("chatId")
-          REFERENCES "chat"("id")
-          ON DELETE CASCADE
-
-          
+        "filename" text NOT NULL,
+        CONSTRAINT "PK_documents_id" PRIMARY KEY ("id")
       );  
-    `)
-  }//TODO: поправить создание таблицы с документами
+    `);
+  }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`
+      DROP TABLE "documents";
+    `);
   }
 
 }
