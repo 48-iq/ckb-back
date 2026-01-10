@@ -28,7 +28,7 @@ export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBoot
     }
   }
 
-  async onApplicationShutdown(signal?: string) {
+  async onApplicationShutdown() {
     await this.driver.close();
   }
 

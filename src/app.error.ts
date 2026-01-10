@@ -2,19 +2,22 @@ import { HttpStatus } from "@nestjs/common";
 
 
 export interface AppErrorDescriptor {
-  httpCode: number
-  message: string
+  httpCode: number;
+  message: string;
 }
 
 
 export class AppError extends Error implements AppErrorDescriptor {
 
-  httpCode: number
+  httpCode: number;
 
-  constructor(reason: AppErrorType) {
-    const appErrorData = AppErrors[reason]
+  causeError?: Error;
+
+  constructor(reason: AppErrorType, e?: Error) {
+    const appErrorData = AppErrors[reason];
     super(appErrorData.message);
-    this.httpCode = appErrorData.httpCode
+    this.httpCode = appErrorData.httpCode;
+    this.causeError = e;
   }
 }
 
@@ -26,8 +29,9 @@ export const AppErrors = {
   EMPTY_ATHORIZATION_HEADER: {httpCode: HttpStatus.UNAUTHORIZED, message: 'Empty authorization header'},
   PERMISSION_DENIED: {httpCode: HttpStatus.FORBIDDEN, message: 'Permission denied'},
   INCORRECT_DATA: {httpCode: HttpStatus.BAD_REQUEST, message: 'Incorrect data'},
+  SAVE_FILE_ERROR: {httpCode: HttpStatus.INTERNAL_SERVER_ERROR, message: 'Save file error'},
 } as const satisfies Record<string, AppErrorDescriptor>
 
 
-export type AppErrorType = keyof typeof AppErrors
+export type AppErrorType = keyof typeof AppErrors;
 

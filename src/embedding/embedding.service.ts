@@ -1,12 +1,13 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { GigaChatEmbeddings } from "langchain-gigachat";
+import { InjectEmbeddingModel } from "./embedding-model.decorator";
 
 
 @Injectable()
 export class EmbeddingService {
 
   constructor(
-    @Inject('EMBEDDING_MODEL') private readonly embeddingModel: GigaChatEmbeddings
+    @InjectEmbeddingModel() private readonly embeddingModel: GigaChatEmbeddings
   ){}
 
   async getEmbedding(text: string) {

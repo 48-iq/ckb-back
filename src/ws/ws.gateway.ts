@@ -1,14 +1,24 @@
+import { UseGuards } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { WebSocketGateway, WebSocketServer } from "@nestjs/websockets";
-import { Server } from "socket.io";
+import { OnGatewayConnection, WebSocketGateway, WebSocketServer } from "@nestjs/websockets";
+import { Server, Socket } from "socket.io";
+import { WsJwtGuard } from "./ws-jwt.guard";
 @WebSocketGateway()
-export class WsGateway {
+@UseGuards(WsJwtGuard)
+export class WsGateway implements OnGatewayConnection {
+
+
+  handleConnection(client: Socket) {
+    const userId = client.data.userId;
+    client.join(`user:${userId}`);
+    console.log(`WS connected userId=${userId}`);
+  }
 
   @WebSocketServer()
   server: Server;
 
-  sendEvent(event: any, userId: string) {
-    this.server.
+  sendEvent(event: string, payload: any, userId: string) {
+    this.server.to(userId).emit(event, payload);
   }
   
 

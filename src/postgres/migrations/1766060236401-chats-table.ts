@@ -9,6 +9,7 @@ export default class ChatsTable1766060236401 implements MigrationInterface {
         "title" character varying NOT NULL,
         "createdAt" TIMESTAMP NOT NULL,
         "isNew" boolean NOT NULL,
+        "isPending" boolean NOT NULL,
         "userId" uuid,
         CONSTRAINT "PK_chat_id" PRIMARY KEY ("id"),
         CONSTRAINT "FK_chat_user" FOREIGN KEY ("userId")
