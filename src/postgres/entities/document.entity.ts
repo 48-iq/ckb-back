@@ -9,7 +9,16 @@ export class Document {
   id: string;
 
   @Column()
-  filename: string;
+  wordFilename: string;
+
+  @Column()
+  pdfFilename: string;
+
+  @Column()
+  title: string;
+
+  @Column()
+  contract: string;
 
   @ManyToMany(() => Message)
   @JoinTable()

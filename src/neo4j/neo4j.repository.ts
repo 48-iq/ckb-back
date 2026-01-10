@@ -1,15 +1,16 @@
-import { Inject, Injectable, OnApplicationBootstrap, OnApplicationShutdown } from "@nestjs/common";
+import { Injectable, OnApplicationBootstrap, OnApplicationShutdown } from "@nestjs/common";
 import { Driver, int, Integer, Transaction } from "neo4j-driver";
 import { NodeType } from "./node-type.type";
 import { NewDocument } from "./new-document.interface";
 import { SavedDocument } from "./saved-document.interface";
 import { Node } from "./node.entity";
 import { NodeNotFoundError } from "./node-not-found.error";
+import { InjectNeo4j } from "./neo4j.decorator";
 
 @Injectable()
 export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBootstrap {
   constructor(
-    @Inject('NEO4J_DRIVER') private readonly driver: Driver
+    @InjectNeo4j() private readonly driver: Driver
   ) {}
   async onApplicationBootstrap() {
     const session = this.driver.session();
@@ -77,29 +78,27 @@ export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBoot
       name: params.name,
       embedding: params.embedding,
       type: params.type
-    })
+    });
     if (params.parentNodeId) {
       await this._createRelation(
         tx, 
         result.records.map(r => r.get("id").low)[0], 
         params.parentNodeId
-      )
-    }
+      );
+    };
     return result.records.map(r => {return {
       id: r.get("id").low,
       data: r.get("data"),
       type: r.get("type"),
       name: r.get("name")
-    }})[0]
+    }})[0];
   }
 
   async saveDocument(newDocument: NewDocument): Promise<SavedDocument> {
-    const session = this.driver.session()
+    const session = this.driver.session();
     try {
-      const tx = await session.beginTransaction()
-
+      const tx = await session.beginTransaction();
       try {
-
         const savedContract = await this._saveNode(tx, {
           name: newDocument.contract.name,
           data: newDocument.contract.name,
@@ -146,35 +145,35 @@ export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBoot
                   embedding: entity.nameEmbedding,
                   type: "Entity",
                   parentNodeId: savedFact.id
-                })
+                });
                 return {
                   id: savedEntity.id,
                   name: savedEntity.name
-                }
+                };
               }))
               return {
                 id: savedFact.id,
                 name: savedFact.name,
                 text: savedFact.data,
                 entities: savedEntities
-              }
+              };
             }))
             return {
               id: savedParagraph.id,
               name: savedParagraph.name,
               text: savedParagraph.data,
               facts: savedFacts
-            }
+            };
           }))
           return {
             id: savedPage.id,
             name: savedPage.name,
             text: savedPage.data,
             paragraphs: savedParagraphs
-          }
-        }))
-        await tx.commit()
-        await tx.close()
+          };
+        }));
+        await tx.commit();
+        await tx.close();
         return {
           pages: savedPages,
           id: savedDocument.id,
@@ -183,19 +182,18 @@ export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBoot
             id: savedContract.id,
             name: savedContract.name
           }
-        }
+        };
       } catch(err) {
-        await tx.rollback()
-        throw err
+        await tx.rollback();
+        throw err;
       } 
     } finally {
-      session.close()
+      session.close();
     }
   }
 
-
   async getNodeById(id: number): Promise<Node> {
-    const session = this.driver.session()
+    const session = this.driver.session();
     try {
       return await session.executeRead(async tx => {
         const result = await tx.run<{
@@ -239,9 +237,9 @@ export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBoot
             n.type AS type,
             collect({id: m.id, type: m.type, name: m.name}) AS relations,
             documents
-        `,{id: int(id)})
+        `,{id: int(id)});
         if (result.records.length === 0)
-          throw new NodeNotFoundError(`Node with id ${id} not found`)
+          throw new NodeNotFoundError(`Node with id ${id} not found`);
         return result.records.map(r => {return {
           id: r.get("id").low,
           data: r.get("data"),
@@ -249,10 +247,10 @@ export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBoot
           name: r.get("name"),
           relations: r.get("relations").map(x => {return {id: x.id.low, type: x.type, name: x.name}}),
           documents: r.get("documents").map(x => {return {id: x.id.low, name: x.name}})
-        }})[0]
+        }})[0];
       })
     } finally {
-      session.close()
+      session.close();
     }
   }
 
@@ -260,8 +258,7 @@ export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBoot
     embedding: number[],
     page: number
   ): Promise<Node[]> {
-    const session = this.driver.session()
-
+    const session = this.driver.session();
     try {
       return await session.executeRead(async tx => {
         const result = await tx.run<{
@@ -294,20 +291,17 @@ export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBoot
             n.type AS type,
             n.name AS name,
             documents AS documents
-        `, {queryVector: embedding, skip: int((page - 1) * 10)})
+        `, {queryVector: embedding, skip: int((page - 1) * 10)});
         return result.records.map(r => {return {
           id: r.get("id").low,
           data: r.get("data"),
           type: r.get("type"),
           name: r.get("name"),
           documents: r.get("documents").map(x => {return {id: x.id.low, name: x.name}})
-        }})
+        }});
       })
-
     } finally {
-      session.close()
+      session.close();
     }
-
   }
-
 }

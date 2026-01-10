@@ -5,7 +5,6 @@ import { Neo4jRepository } from "./neo4j.repository"
 
 
 @Module({
-  imports: [ConfigModule],
   providers: [Neo4jDriverProvider, Neo4jRepository],
   exports: [Neo4jRepository]
 })
