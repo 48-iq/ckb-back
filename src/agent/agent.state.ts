@@ -10,7 +10,7 @@ const State = Annotation.Root({
   result: Annotation<string>,
   plan: Annotation<string>,
   documents: Annotation<string[]>,
-  previousMessages: Annotation<Message[]>,
+  previousMessages: Annotation<BaseMessage[]>,
 }); // TODO: убранно поле запроса пользователя, заместо этого создано поле previousMessages, переделать агента, для поддержки контекста
 
 export { State };

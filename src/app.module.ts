@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm'
 import Joi from 'joi'
 import { ChatModule } from './chat/chat.module'
 import { AuthModule } from './auth/auth.module'
+import { GigaChatModule } from './gigachat/gigachat.module'
 
 @Module({
   imports: [
@@ -16,6 +17,9 @@ import { AuthModule } from './auth/auth.module'
         POSTGRES_PASSWORD: Joi.string().required(),
         POSTGRES_DB: Joi.string().required(),
         GIGACHAT_API_KEY: Joi.string().required(),
+        GIGACHAT_MODEL: Joi.string().optional(),
+        GIGACHAT_SCOPE: Joi.string().optional(),
+        GIGACHAT_TIMEOUT: Joi.number().optional(),
         JWT_SECRET: Joi.string().required(),
         JWT_ISSUER: Joi.string().required(),
         JWT_AUDIENCE: Joi.string().required(),
@@ -44,7 +48,7 @@ import { AuthModule } from './auth/auth.module'
       }
     }),
     ChatModule,
-    AuthModule,
+    AuthModule
   ],
 })
 export class AppModule {}

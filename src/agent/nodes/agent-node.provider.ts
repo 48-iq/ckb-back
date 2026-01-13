@@ -14,10 +14,7 @@ export const AgentNodeProvider: Provider = {
   useFactory: (model: GigaChat, neo4jRepository: Neo4jRepository, embeddingService: EmbeddingService) => {
     return async (state: typeof State.State) => {
       
-      const { userQuery, plan, messages } = state
-
-      const qeuryVector = await embeddingService.getEmbedding(userQuery)
-      const mustRelevantNodes = await neo4jRepository.vectorSearch(qeuryVector, 1)
+      const { previousMessages, plan, messages } = state
 
       const startMessageText = `
         Ты агент - эксперт по документации в строительной отрасли.
@@ -46,18 +43,16 @@ export const AgentNodeProvider: Provider = {
         }
 
         Для ответа на вопрос пользователя тебе будут доступны инструменты:
-        1) vector_search({query: string, page: number}) - постраничный векторный поиск близких по контексту узлов, 
+        1) vector_search({query: string, page: number}) - постраничный векторный поиск близких по контексту к query узлов, 
         размер страницы = 10, нумерация начинается с 1;
-        2) node_by_id({id: number}) - получение узла по его id, если узел содержит длинные данные, то они будут обрезаны, а в конце выведется '...длинные данные' ;
+        2) node_by_id({id: number}) - получение узла по его id и связанных с ним узлов, если узел содержит длинные данные, то они будут обрезаны, а в конце выведется '...длинные данные' ;
         3) full_node_by_id({id: number}) - получение узла по его id с полными данными;
 
-        
-        Изначально тебе будет дан вопрос пользователя, логический план ответа на него, 
-        а также 10 ближайших по смыслу к вопросу пользователя элементов графа.
+        Для начала работы получи первые узлы с помощью vector_search.
         
         Используя инструменты и логический план, ты должен составить ответ на вопрос пользователя.
         
-        если узел не нужен для ответа на вопрос, а используется как промежуточный для получения нужного узла, используй node_by_id;
+        Если узел не нужен для ответа на вопрос, а используется как промежуточный для получения нужного узла;
         
         Строго следуй заданному формату.
       `
