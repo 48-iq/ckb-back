@@ -6,6 +6,7 @@ import { SavedDocument } from "./saved-document.interface";
 import { Node } from "./node.entity";
 import { NodeNotFoundError } from "./node-not-found.error";
 import { InjectNeo4j } from "./neo4j.decorator";
+import { RelatedNode } from "./related-node.entity";
 
 @Injectable()
 export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBootstrap {
@@ -54,36 +55,38 @@ export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBoot
     `, { parentNodeId, nodeId });
   }
 
-  private async _saveNode(tx: Transaction, params: {
+  private async _saveNode(tx: Transaction, args: {
     data: string
     name: string
     embedding: number[]
     type: NodeType
-    parentNodeId?: number
+    parentNodeId?: number,
+    postgresId?: string
   }) {
     const id = await this._genId(tx)
     const result = await tx.run<{id: Integer, data: string, type: NodeType, name: string}>(`
       MATCH (s:Sequence {name: 'global'})
-      MERGE (n:${params.type} {data: $data, type: $type})
+      MERGE (n:${args.type} {data: $data, type: $type})
       ON CREATE SET 
         n.id = $id,
         n:Embeddable
       SET 
         n.embedding = $embedding,
         n.name = $name
+        ${args.postgresId?"SET n.postgres_id = $postgresId":""}
       RETURN n.id as id, n.data as data, n.type as type, n.name as name
     `, {
       id: id,
-      data: params.data,
-      name: params.name,
-      embedding: params.embedding,
-      type: params.type
+      data: args.data,
+      name: args.name,
+      embedding: args.embedding,
+      type: args.type
     });
-    if (params.parentNodeId) {
+    if (args.parentNodeId) {
       await this._createRelation(
         tx, 
         result.records.map(r => r.get("id").low)[0], 
-        params.parentNodeId
+        args.parentNodeId
       );
     };
     return result.records.map(r => {return {
@@ -192,7 +195,7 @@ export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBoot
     }
   }
 
-  async getNodeById(id: number): Promise<Node> {
+  async getNodeById(id: number): Promise<RelatedNode> {
     const session = this.driver.session();
     try {
       return await session.executeRead(async tx => {
@@ -304,4 +307,24 @@ export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBoot
       session.close();
     }
   }
+
+  async getDocumentPostgresId(documentId: number): Promise<string|null> {
+    const session = this.driver.session();
+    try {
+      const result = await session.executeRead(async tx => {
+        const result = await tx.run<{postgres_id: string}>(
+          `
+            MATCH (d:Document {id: $documentId})
+            RETURN d.postgres_id as postgres_id
+          `, {documentId: int(documentId)});
+        if (result.records.length === 0)
+          return null;
+        return result.records.map(r => r.get("postgres_id"))[0];
+      });
+      return result;
+    } finally {
+      session.close();
+    }
+  }
 }
+

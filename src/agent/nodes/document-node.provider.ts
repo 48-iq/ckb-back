@@ -1,41 +1,73 @@
 import { Provider } from "@nestjs/common"
-import { AGENT_MODEL } from "../agent-model.provider"
-import { GigaChat } from "langchain-gigachat"
 import { State } from "../agent.state"
 import { z } from "zod"
-import { HumanMessage } from "@langchain/core/messages"
+import { GIGACHAT } from "src/gigachat/gigachat.provider"
+import GigaChat from "gigachat"
+import { ConfigService } from "@nestjs/config"
 
 export const DOCUMENT_NODE = 'DOCUMENT_NODE'
 
-const documentResultChema = z.object({
-  documents: z.array(z.string()).describe("список названий документов (Document.name)"),
+const documentResultSchema = z.object({
+  documents: z.array(z.number()),
 })
 
 export const DocumentNodeProvider: Provider = {
   provide: DOCUMENT_NODE,
-  inject: [AGENT_MODEL],
-  useFactory: (model: GigaChat) => {
+  inject: [GIGACHAT, ConfigService],
+  useFactory: (model: GigaChat, configService: ConfigService) => {
+
+    const maxParseRetry = +(configService.get<string>('MAX_PARSE_RETRY') || '5');
+
     return async (state: typeof State.State) => {
-      const { messages } = state
-      const newMessage = new HumanMessage(`
-        Определи на основе каких документов был дан вопрос.
-        и выведи список названий документов.  
-      `)
-      const structuredModel = model.withStructuredOutput(documentResultChema)
-      messages.push(newMessage)
-      const max_retries = 5
-      for (let i = 0; i < max_retries; i++) {
-        const response = await structuredModel.invoke(messages)
-        try {
-          const result = documentResultChema.parse(response)
-          return result
-        } catch (error) {
-          continue
-          //продолжаем попытки получить корректный ответ
+      const { messages, result } = state;
+      const tryAnswer = async () => {
+        const response = await model.chat({
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            ...messages,
+            { role: "assistant", content: `=====ИТОГОВЫЙ ОТВЕТ=====\n${result}` },
+          ],
+          temperature: 0
+        })
+        return response.choices[0].message.content;
+      }
+      for (let i = 0; i < maxParseRetry; i++) {
+        const answer = await tryAnswer();
+        const parsed = documentResultSchema.safeParse(answer);
+        if (parsed.success) {
+          return { documents: parsed.data.documents };
+        } else {
+          continue;
         }
       }
-      //если не удалось получить корректный ответ
-      return { documents: ['Ошибка получения списка документов, попробуйте повторить вопрос.'] }
+      return { documents: [] };
     }
   }
 }
+
+const SYSTEM_PROMPT = `
+###
+Ты агент в мультиагентной системе.
+Предыдущему агенту было необходимо ответить на вопрос пользователя используя графовую сеть знаний.
+Для доступа к этой сети знаний предыдущий агент использовал инструменты/функции,
+после вызова инструмента предыдущий агент получал один или несколько узлов графа знаний.
+Каждый узел имеет структуру:
+{
+  id: number,
+  name: string,
+  data: string,
+  type: Document|Page|Paragraph|Fact|Entity,
+  documents: {id: number, name: string}[],
+}
+Тебя интересует поле documents - это документы, на основе которых был создан узел.
+
+###
+Твоя задача определить на основе каких документов агент ответил на вопрос и выдать ответ в таком формате:
+{
+  documents: number[]
+}
+
+Выведи информацию только о тех документах, которые были использованы в ответе, не описывай все полученный предыдущим агентом документы.
+
+###
+Не выдумывай информацию, определи документы и строго следуй заданному формату.`;

@@ -1,23 +1,27 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { GigaChatEmbeddings } from "langchain-gigachat";
-import { InjectEmbeddingModel } from "./embedding-model.decorator";
+import { ConfigService } from "@nestjs/config";
+import GigaChat from "gigachat";
+import { InjectGigachat } from "src/gigachat/gigachat.decorator";
 
 
 @Injectable()
 export class EmbeddingService {
 
+
+  private readonly model: string;
   constructor(
-    @InjectEmbeddingModel() private readonly embeddingModel: GigaChatEmbeddings
-  ){}
+    @InjectGigachat() private readonly gigachat: GigaChat,
+    private readonly ConfigService: ConfigService,
+  ){
+    this.model = this.ConfigService.get<string>('GIGACHAT_EMBEDDING_MODEL') || 'EmbeddingsGigaR';
+  }
 
   async getEmbedding(text: string) {
-
-    const result = await this.embeddingModel.embedQuery(text)
-    return result
+    return this.getEmbeddings([text]).then(res => res[0]);
   }
 
   async getEmbeddings(texts: string[]) {
-    const result = await this.embeddingModel.embedDocuments(texts)
-    return result
+    const response = await this.gigachat.embeddings(texts, this.model);
+    return response.data.map(item => item.embedding);
   }
 }

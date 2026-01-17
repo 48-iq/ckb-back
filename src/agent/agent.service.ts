@@ -5,7 +5,7 @@ import { StateGraph, START, END, CompiledStateGraph, StateType, CompiledGraph } 
 import { State } from "./agent.state";
 import { PLAN_NODE } from "./nodes/plan-node.provider";
 import { RESULT_NODE } from "./nodes/result-node.provider";
-import { TOOL_NODE } from "./nodes/tool-node.provider";
+import { TOOL_NODE } from "./nodes/functions-node";
 
 @Injectable()
 export class AgentService {
@@ -16,6 +16,15 @@ export class AgentService {
     string
   >;
 
+  private shouldContinueEdge = (state: typeof State.State) => {
+    const { messages } = state;
+    const lastMessage = messages[messages.length - 1];
+    if ("tool_calls" in lastMessage && Array.isArray(lastMessage.tool_calls) && lastMessage.tool_calls?.length) {
+      return "toolNode";
+    }
+    return "resultNode";
+  }
+
   constructor(
     @Inject(PLAN_NODE) private readonly planNode,
     @Inject(AGENT_NODE) private readonly agentNode,
@@ -23,15 +32,6 @@ export class AgentService {
     @Inject(DOCUMENT_NODE) private readonly documentNode,
     @Inject(TOOL_NODE) private readonly toolNode
   ) {
-
-    const shouldContinueEdge = (state: typeof State.State) => {
-      const { messages } = state;
-      const lastMessage = messages[messages.length - 1];
-      if ("tool_calls" in lastMessage && Array.isArray(lastMessage.tool_calls) && lastMessage.tool_calls?.length) {
-        return "toolNode";
-      }
-      return "resultNode";
-    }
 
     this.agent = new StateGraph(State)
       .addNode("planNode", planNode)
@@ -42,7 +42,7 @@ export class AgentService {
 
       .addEdge(START, "planNode")
       .addEdge("planNode", "agentNode")
-      .addConditionalEdges("agentNode", shouldContinueEdge)
+      .addConditionalEdges("agentNode", this.shouldContinueEdge)
       .addEdge(documentNode, END).compile();
   }
 
