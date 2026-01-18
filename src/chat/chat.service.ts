@@ -51,6 +51,4 @@ export class ChatService {
     return chats.map(chat => this.chatMapper.toDto(chat))
   }
 
-  async 
-
 }

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Inject, Param, Post, Query } from "@nestjs/common"
+import { Body, Controller, Delete, Get, Inject, Param, Post, Query, Req } from "@nestjs/common"
 import { ChatService } from "./chat.service"
 import { NewMessageDto } from "./dto/new-message"
 
@@ -11,5 +11,12 @@ export class ChatController {
     private readonly chatService: ChatService
   ) {}
 
+  @Get()
+  async getChats(
+    @Req() req
+  ) {
+    const userId = req["userId"];
+    
+  }
   
 }
