@@ -17,12 +17,12 @@ export class AuthService {
 
   async login(loginDto: LoginDto): Promise<JwtDto> {
     const user = await this.userService.findOneByUsername(loginDto.username);
-    this._verifyPassword(user.password, loginDto.password);
+    this.verifyPassword(user.password, loginDto.password);
     const token = await this.jwtService.generateTokenForUser(user.id);
     return { jwt: token };
   }
 
-  _verifyPassword(userPassword: string, enteredPassword: string) {
+  verifyPassword(userPassword: string, enteredPassword: string) {
     const result = bcrypt.compareSync(enteredPassword, userPassword);
     if (!result) throw new AppError("INCORRECT_PASSWORD");
   }

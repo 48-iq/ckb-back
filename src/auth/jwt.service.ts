@@ -24,7 +24,7 @@ export class JwtService {
     this.algroithm = configService.get<string>('JWT_ALGORITHM');
   }
 
-  async _generateToken(claims: JwtPayload) {
+  private async generateToken(claims: JwtPayload) {
     const jwt = await new jose.SignJWT(claims)
       .setProtectedHeader({ alg: this.algroithm })
       .setIssuedAt()
@@ -36,7 +36,7 @@ export class JwtService {
     return jwt;
   }
 
-  async _verifyToken(token: string) {
+  private async verifyToken(token: string) {
     const { payload } = await jose.jwtVerify<JwtPayload>(token, this.secret, {
       issuer: this.issuer,
       audience: this.audience
@@ -46,11 +46,11 @@ export class JwtService {
   }
 
   async generateTokenForUser(userId: string) {
-    return await this._generateToken({ userId });
+    return await this.generateToken({ userId });
   }
 
   async verifyAndRetrieveUserId(jwt: string) {
-    const { userId } = await this._verifyToken(jwt);
+    const { userId } = await this.verifyToken(jwt);
     return userId;
   }
 

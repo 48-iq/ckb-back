@@ -1,5 +1,4 @@
 import { CanActivate, ExecutionContext, Injectable } from "@nestjs/common";
-import { Observable } from "rxjs";
 import { JwtService } from "./jwt.service";
 import { Request } from "express";
 import { AppError } from "src/app.error";
@@ -22,7 +21,7 @@ export class AuthGuard implements CanActivate {
     if (isPublic) return true;
     const request = context.switchToHttp().getRequest();
     const token = this.extractTokenFromHeader(request);
-    if (!token) throw new AppError("EMPTY_ATHORIZATION_HEADER");
+    if (!token) throw new AppError("EMPTY_AUTHORIZATION_HEADER");
     const userId = await this.jwtService.verifyAndRetrieveUserId(token);
     request['userId'] = userId;
     return true;  
@@ -30,6 +29,7 @@ export class AuthGuard implements CanActivate {
 
   private extractTokenFromHeader(request: Request): string | undefined {
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
+    if (type !== 'Bearer') return ;
     return type === 'Bearer' ? token : undefined;
   }
   

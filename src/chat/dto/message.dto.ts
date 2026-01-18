@@ -1,13 +1,14 @@
+import { MessageRole } from "gigachat/interfaces"
 
 
 export class MessageDto {
-  id: string
-  role: "assistant" | "user"
-  text: string
+  id: string;
+  role: MessageRole;
+  text: string;
   documents?: {
-    link: string
-    name: string
-  }[]
-  chatId: string
+    link: string;
+    name: string;
+  }[];
+  chatId: string;
 }
 

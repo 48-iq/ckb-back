@@ -2,5 +2,6 @@
 
 
 export class NewMessageDto {
-  text: string
+  chatId: string;
+  text: string;
 }
