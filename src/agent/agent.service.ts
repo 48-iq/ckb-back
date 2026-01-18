@@ -5,7 +5,9 @@ import { StateGraph, START, END, CompiledStateGraph, StateType, CompiledGraph } 
 import { State } from "./agent.state";
 import { PLAN_NODE } from "./nodes/plan-node.provider";
 import { RESULT_NODE } from "./nodes/result-node.provider";
-import { TOOL_NODE } from "./nodes/functions-node";
+import { FUNCTIONS_NODE } from "./nodes/functions-node";
+import { MessageDto } from "src/chat/dto/message.dto";
+import { Message } from "gigachat/interfaces";
 
 @Injectable()
 export class AgentService {
@@ -18,10 +20,9 @@ export class AgentService {
 
   private shouldContinueEdge = (state: typeof State.State) => {
     const { messages } = state;
-    const lastMessage = messages[messages.length - 1];
-    if ("tool_calls" in lastMessage && Array.isArray(lastMessage.tool_calls) && lastMessage.tool_calls?.length) {
-      return "toolNode";
-    }
+    const lastMessage = messages.at(-1);
+    if (lastMessage === undefined) return "resultNode";
+    if (lastMessage.function_call !== undefined) return "functionsNode";
     return "resultNode";
   }
 
@@ -30,27 +31,60 @@ export class AgentService {
     @Inject(AGENT_NODE) private readonly agentNode,
     @Inject(RESULT_NODE) private readonly resultNode,
     @Inject(DOCUMENT_NODE) private readonly documentNode,
-    @Inject(TOOL_NODE) private readonly toolNode
+    @Inject(FUNCTIONS_NODE) private readonly functionsNode
   ) {
 
     this.agent = new StateGraph(State)
       .addNode("planNode", planNode)
       .addNode("agentNode", agentNode)
-      .addNode("toolNode", toolNode)
+      .addNode("functionsNode", functionsNode)
       .addNode("resultNode", resultNode)
       .addNode("documentNode", documentNode)
-
       .addEdge(START, "planNode")
       .addEdge("planNode", "agentNode")
-      .addConditionalEdges("agentNode", this.shouldContinueEdge)
+      .addConditionalEdges("agentNode", this.shouldContinueEdge, ["functionsNode", "resultNode"])
+      .addEdge("resultNode", "documentNode")
       .addEdge(documentNode, END).compile();
   }
 
+  private createState(args: {
+    messagesDto: MessageDto[],
+    maxTokens?: number
+  }) {
+    if (!args.messagesDto || args.messagesDto.length === 0) 
+      return { messages: [{ role: "user", text: "Вопрос отсутствует" }] };
+    const messages: Message[] = []
+    for (let i = 0; i < args.messagesDto.length; i++) {
+      const message = args.messagesDto[i];
+      const processedMessage = {
+        role: message.role,
+        content: message.text
+      };
+      if (message.role === "user") {
+        processedMessage.content = `${message.text}` + 
+        `${message.documents?"\n=====ДОКУМЕНТЫ=====\n":""}` + 
+        `${message.documents?.map(doc => doc.name).join('\n')}`;
+      }
+      if (i === args.messagesDto.length - 1) {
+        processedMessage.content = `=====ГЛАВНЫЙ ВОПРОС=====\n${processedMessage.content}`
+      }
+      messages.push(processedMessage);
+    }
+    return {
+      messages,
+      totalTokens: 0
+    };
+  }
   
-  async run(userQuery: string) {
-    return await this.agent.stream(
-      {userQuery}, {streamMode: ["custom", "updates"]},
-    );
+  async processChat(messages: MessageDto) {
+    const state = this.createState({ messagesDto: [messages] });
+    const result = await this.agent.stream(
+      state,
+      {
+        streamMode: ["custom", "updates"]
+      }
+    )
+    return result;
   }
   
 }

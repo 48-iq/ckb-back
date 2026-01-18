@@ -5,7 +5,7 @@ import { AgentNodeProvider } from "./nodes/agent-node.provider";
 import { DocumentNodeProvider } from "./nodes/document-node.provider";
 import { PlanNodeProvider } from "./nodes/plan-node.provider";
 import { ResultNodeProvider } from "./nodes/result-node.provider";
-import { ToolNodeProvider } from "./nodes/functions-node";
+import { FunctionsNodeProvider } from "./nodes/functions-node";
 import { AgentService } from "./agent.service";
 import { Neo4jModule } from "src/neo4j/neo4j.module";
 import { FunctionsService } from "./functions.service";
@@ -18,7 +18,8 @@ import { FunctionsService } from "./functions.service";
     DocumentNodeProvider,
     PlanNodeProvider,
     ResultNodeProvider,
-    ToolNodeProvider,
+    FunctionsNodeProvider,
+    
     AgentService,
     FunctionsService
   ],

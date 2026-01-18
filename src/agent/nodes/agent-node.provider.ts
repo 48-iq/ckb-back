@@ -2,7 +2,6 @@ import { Provider } from "@nestjs/common";
 import { State } from "../agent.state";
 import GigaChat from "gigachat";
 import { GIGACHAT } from "src/gigachat/gigachat.provider";
-import { Message } from "gigachat/interfaces";
 import { FunctionsService } from "../functions.service";
 
 export const AGENT_NODE = 'AGENT_NODE'
@@ -18,13 +17,13 @@ export const AgentNodeProvider: Provider = {
       
       const { plan, messages } = state;
 
-      const startMessages: Message[]  = [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "assistant", content: plan},
-      ];
       const response = await model.chat({
         temperature: 0,
-        messages: [...startMessages, ...messages],
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "assistant", content: `=====ЛОГИЧЕСКИЙ ПЛАН=====\n${plan}`},
+          ...messages
+        ],
         function_call: "auto",
         functions: functionsService.getFunctions()
       });
@@ -57,8 +56,8 @@ Contract -> Document -> Page -> Paragraph -> Fact -> Entity
   data: текст узла,
   type: тип узла (Contract, Document, Paragraph, Fact, Entity),
   name: название узла, кратко описывающий его содержимое
-}
-
+  }
+  
 ###
 Для ответа на вопрос пользователя тебе будут доступны инструменты/функции:
 1) vector_search({query: string, page: number}) - постраничный векторный поиск близких по контексту к query узлов, 
@@ -75,5 +74,10 @@ Contract -> Document -> Page -> Paragraph -> Fact -> Entity
 Шаг 5: Если соседние узлы не содержат данные для ответа на вопрос, то либо проверь другой узел из vector_search, либо проверь других соседей узла или соседей соседей узла.
 Шаг 6: Продолжай проверять узлы, которые содержат данные для ответа на вопрос, их соседей и соседей соседей, пока не ответишь на вопрос пользователя. 
 
+### 
+Ответ на вопрос пользователя должен включать аргументы, которые указывают на информацию из документной базы,
+на основе которой был составлен ответ.
+
 ###
+Предыдущий агент создал логический план ответа на вопрос, который ты должен использовать.
 Не выдумывай информацию, используй инструменты и строго следуй заданному формату.`;

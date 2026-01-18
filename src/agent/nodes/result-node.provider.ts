@@ -1,9 +1,8 @@
 import { Provider } from "@nestjs/common";
-import { AGENT_MODEL } from "../agent-model.provider";
-import { GigaChat } from "langchain-gigachat";
 import { State } from "../agent.state";
 import { LangGraphRunnableConfig } from "@langchain/langgraph";
-import { HumanMessage } from "@langchain/core/messages";
+import { GIGACHAT } from "src/gigachat/gigachat.provider";
+import GigaChat from "gigachat";
 
 
 
@@ -11,35 +10,58 @@ export const RESULT_NODE = 'RESULT_NODE';
 
 export const ResultNodeProvider: Provider = {
   provide: RESULT_NODE,
-  inject: [AGENT_MODEL],
+  inject: [GIGACHAT],
   useFactory: (model: GigaChat) => {
     return async (state: typeof State.State, config: LangGraphRunnableConfig) => {
       const { messages } = state;
-      const resultQueryText = `
-        На основе полученных данных сформулируй четкий и краткий ответ на вопрос пользователя.
-        Используя информацию не описывай, что она находится в графе.
-        Сначала напиши ответ, а потом аргументы.
-        Вот пример:
+      const response = model.stream({
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          ...messages,
+        ],
+        temperature: 0,
+        stream: true,
+      });
+      let result = '';
 
-        На ремонт было потрачено 500000 рублей.
-        Аргументы:
-        - согласно пункту 2, 400000 рублей ушло на оплату работников,
-        - согласно пункту 3, 100000 рублей ушло на материалы.
-
-        Строго следуй заданному формату.
-      `;
-      const stream = await model.stream([...messages, new HumanMessage(resultQueryText)]);
-
-      let res = "";
-
-      for await (const chunk of stream) {
-        if (!chunk.content) continue
-        res += chunk.content
-        if (config.writer) config.writer({
-          resultChunk: chunk.content
-        })
+      for await (const chunk of response) {
+        const content = chunk.choices[0]?.delta.content||'';
+        if (config.writer) {
+          config.writer({ resultUpdate: content });
+        }
+        result += content;
       }
-      return { result: res };
+      
+      return { result };
     }
   }
 }
+
+const SYSTEM_PROMPT = `
+###
+Ты агент в мультиагентной системе.
+Предыдущий агент ответил на вопрос пользователя, используя графовую сеть знаний и инструменты, 
+но его ответ может включать упоминание графа, id узлов, название инструментов, 
+фразы "на основе предоставленных данных" или "с помощью полученной информации", упоминание агента и т.д.
+
+Твоя задача составить лаконичный, аргументированный ответ на вопрос пользователя, похожий на ответ в чате, 
+в котором не будут упоминания графа, id узлов, название инструментов, упоминания того, что ты агент, фраз о том, 
+что агент анализировал данные. 
+
+Аргументами могут служить отрывки из текста, например: в документах указано "...Зиновьев обязуется сделать ремонт на Вавилова д. 6...",
+а также логические сопоставления, например: Единственным подрядчиком фигурирующим в документе о ремонте на Вавилова д. 6, является Зиновьев.
+
+###
+Вот пример:
+Вопрос: Какой подрядчик сделал ремонт на Вавилова д. 6.
+
+...рассуждения прошлого агента...
+
+Ответ прошлого агента:  "На основе предоставленных данных, это подрядчик Зиновьев, 
+об этом сообщается в узле номер 115: "...настоящим положением подрядчик Зиновьев обязуется сделать ремонт на Вавилова д. 6...".
+
+Твой ответ: Это подрядчик Зиновьев, в документах указано "...Зиновьев обязуется сделать ремонт на Вавилова д. 6...".
+
+###
+Не выдумывай информацию, строго следуй заданному формату.
+`;
