@@ -1,7 +1,7 @@
 
 
 
-export class NewMessageDto {
+export class NewUserMessageDto {
   chatId: string;
   text: string;
 }

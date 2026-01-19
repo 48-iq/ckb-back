@@ -7,6 +7,8 @@ import { ChatMapper } from "./chat.mapper";
 import { Message } from "src/postgres/entities/message.entity";
 import { AppError } from "src/app.error";
 import { ChatPageDto } from "./dto/chat-page.dto";
+import { NewUserMessageDto } from "./dto/new-user-message.dto";
+import { WsGateway } from "src/ws/ws.gateway";
 
 @Injectable()
 export class ChatService {
@@ -14,6 +16,8 @@ export class ChatService {
   constructor(
     @InjectRepository(Chat) private readonly chatRepository: Repository<Chat>,
     @InjectRepository(User) private readonly userRepository: Repository<User>,
+    @InjectRepository(Message) private readonly messageRepository: Repository<Message>, 
+    private readonly wsGateway: WsGateway,
     private readonly chatMapper: ChatMapper
   ) {}
 
@@ -82,8 +86,22 @@ export class ChatService {
     chatPageDto.data = entities.map(chat => 
       this.chatMapper.toDto(chat, chat.lastMessageAt)
     );
-    
     return chatPageDto;
   }
 
+
+  async sendMessage(userId: string, newUserMessageDto: NewUserMessageDto) {
+    const { chatId, text } = newUserMessageDto;
+    const chat = await this.chatRepository.findOneBy({ id: chatId });
+    if (!chat) throw new AppError("CHAT_NOT_FOUND");
+    const message = new Message();
+    message.chat = chat;
+    message.role = "user";
+    message.text = text;
+    await this.messageRepository.save(message);
+    await this.wsGateway.sendEvent(
+      'newMessage', ,
+      userId
+    );
+  }
 }

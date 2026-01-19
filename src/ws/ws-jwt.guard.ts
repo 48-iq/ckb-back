@@ -2,7 +2,6 @@ import {
   CanActivate,
   ExecutionContext,
   Injectable,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { Socket } from 'socket.io';
 import { AppError } from 'src/app.error';
@@ -20,13 +19,12 @@ export class WsJwtGuard implements CanActivate {
       client.handshake.headers?.authorization?.split(' ')[1];
 
     if (!token) {
-      throw new UnauthorizedException('JWT token missing');
+      throw new AppError("EMPTY_AUTHORIZATION_HEADER");
     }
 
     try {
       const userId = this.jwtService.verifyAndRetrieveUserId(token);
-
-      client.data.userId = userId; 
+      client.data["userId"] = userId; 
       return true;
     } catch {
       throw new AppError("INCORRECT_JWT");

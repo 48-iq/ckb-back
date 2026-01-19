@@ -9,10 +9,7 @@ export class Document {
   id: string;
 
   @Column()
-  wordFilename: string;
-
-  @Column()
-  pdfFilename: string;
+  filename: string
 
   @Column()
   title: string;

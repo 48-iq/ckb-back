@@ -1,6 +1,7 @@
 import { Column, CreateDateColumn, Entity, ManyToMany, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm"
 import { Chat } from "./chat.entity"
 import { Document } from "./document.entity"
+import { type MessageRole } from "gigachat/interfaces"
 @Entity({ name: 'messages' })
 export class Message {
 
@@ -8,7 +9,7 @@ export class Message {
   id: string
 
   @Column()
-  role: "user" | "assistant"
+  role: MessageRole
 
   @CreateDateColumn()
   createdAt: Date

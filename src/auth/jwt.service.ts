@@ -11,22 +11,22 @@ export class JwtService {
 
   private readonly secret: Uint8Array<ArrayBuffer>;
 
-  private readonly issuer;
+  private readonly issuer: string;
   
-  private readonly audience;
+  private readonly audience: string;
 
-  private readonly algroithm;
+  private readonly algorithm: string;
 
   constructor( @Inject() configService: ConfigService ) {
     this.secret = new TextEncoder().encode(configService.get<string>('JWT_SECRET'));
-    this.issuer = configService.get<string>('JWT_ISSUER');
-    this.audience = configService.get<string>('JWT_AUDIENCE');
-    this.algroithm = configService.get<string>('JWT_ALGORITHM');
+    this.issuer = configService.get<string>('JWT_ISSUER') || 'ckb-back';
+    this.audience = configService.get<string>('JWT_AUDIENCE') || 'ckb-back';
+    this.algorithm = configService.get<string>('JWT_ALGORITHM') || 'HS256';
   }
 
   private async generateToken(claims: JwtPayload) {
     const jwt = await new jose.SignJWT(claims)
-      .setProtectedHeader({ alg: this.algroithm })
+      .setProtectedHeader({ alg: this.algorithm })
       .setIssuedAt()
       .setAudience(this.audience)
       .setIssuer(this.issuer)

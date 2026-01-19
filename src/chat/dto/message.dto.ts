@@ -7,7 +7,8 @@ export class MessageDto {
   text: string;
   documents?: {
     link: string;
-    name: string;
+    title: string;
+    
   }[];
   chatId: string;
 }

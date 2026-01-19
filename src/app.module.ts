@@ -4,13 +4,13 @@ import { TypeOrmModule } from '@nestjs/typeorm'
 import Joi from 'joi'
 import { ChatModule } from './chat/chat.module'
 import { AuthModule } from './auth/auth.module'
-import { GigaChatModule } from './gigachat/gigachat.module'
 
 @Module({
   imports: [
     ConfigModule.forRoot({ 
       isGlobal: true,
       validationSchema: Joi.object({
+        APP_HOST: Joi.string().required(),
         POSTGRES_HOST: Joi.string().required(),
         POSTGRES_PORT: Joi.number().required(),
         POSTGRES_USER: Joi.string().required(),

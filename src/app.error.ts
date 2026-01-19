@@ -26,6 +26,7 @@ export class AppError extends Error implements AppErrorDescriptor {
 
 
 export const AppErrors = {
+  CHAT_NOT_FOUND: {httpCode: HttpStatus.NOT_FOUND, message: 'Chat not found'},
   USER_NOT_FOUND: {httpCode: HttpStatus.NOT_FOUND, message: 'User not found'},
   INCORRECT_PASSWORD: {httpCode: HttpStatus.UNAUTHORIZED, message: 'Incorrect password'},
   INCORRECT_JWT: {httpCode: HttpStatus.UNAUTHORIZED, message: 'Incorrect jwt'},

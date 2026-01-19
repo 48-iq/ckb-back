@@ -1,6 +1,5 @@
 import { Body, Controller, Delete, Get, Inject, Param, Post, Query, Req } from "@nestjs/common"
 import { ChatService } from "./chat.service"
-import { NewMessageDto } from "./dto/new-message"
 
 
 @Controller("/api/chats")

@@ -5,10 +5,6 @@ import { AppError } from "src/app.error";
 import { Reflector } from "@nestjs/core";
 import { IS_PUBLIC_KEY } from "./public.decorator";
 
-
-
-
-
 @Injectable()
 export class AuthGuard implements CanActivate {
   
@@ -22,9 +18,13 @@ export class AuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const token = this.extractTokenFromHeader(request);
     if (!token) throw new AppError("EMPTY_AUTHORIZATION_HEADER");
-    const userId = await this.jwtService.verifyAndRetrieveUserId(token);
-    request['userId'] = userId;
-    return true;  
+    try {
+      const userId = await this.jwtService.verifyAndRetrieveUserId(token);
+      request['userId'] = userId;
+      return true;  
+    } catch (e) {
+      throw new AppError("INCORRECT_JWT");
+    }
   }
 
   private extractTokenFromHeader(request: Request): string | undefined {
