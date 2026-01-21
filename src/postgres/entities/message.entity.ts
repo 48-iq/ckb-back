@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, Entity, ManyToMany, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm"
+import { Column, CreateDateColumn, Entity, JoinTable, ManyToMany, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm"
 import { Chat } from "./chat.entity"
 import { Document } from "./document.entity"
 import { type MessageRole } from "gigachat/interfaces"
@@ -6,20 +6,21 @@ import { type MessageRole } from "gigachat/interfaces"
 export class Message {
 
   @PrimaryGeneratedColumn('uuid')
-  id: string
+  id: string;
 
   @Column()
-  role: MessageRole
+  role: MessageRole;
 
   @CreateDateColumn()
-  createdAt: Date
+  createdAt: Date;
 
   @Column()
-  text: string
+  text: string;
 
   @ManyToOne(() => Chat, chat => chat.messages)
-  chat: Chat
+  @JoinTable()
+  chat: Chat;
 
-  @ManyToMany(() => Document)
-  documents: Document[]
+  @ManyToMany(() => Document, (document) => document.messages, { eager: true })
+  documents: Document[];
 }

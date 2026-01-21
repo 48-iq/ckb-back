@@ -4,6 +4,7 @@ export class MessagesTable1766060519273 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
+      CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
       CREATE TABLE "messages" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
         "role" character varying NOT NULL,

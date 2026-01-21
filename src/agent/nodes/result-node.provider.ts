@@ -27,7 +27,7 @@ export const ResultNodeProvider: Provider = {
       for await (const chunk of response) {
         const content = chunk.choices[0]?.delta.content||'';
         if (config.writer) {
-          config.writer({ resultUpdate: content });
+          config.writer({ type: 'updateResult', result: result });
         }
         result += content;
       }

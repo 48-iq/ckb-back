@@ -1,9 +1,10 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-export class MessagesDocumentsTable1768056109394 implements MigrationInterface {
+export class MessagesDocumentsTable1768841648671 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
+      CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
       CREATE TABLE "messages_documents" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
         "messageId" uuid NOT NULL,
@@ -24,5 +25,4 @@ export class MessagesDocumentsTable1768056109394 implements MigrationInterface {
       DROP TABLE "messages_documents";
     `);
   }
-
 }

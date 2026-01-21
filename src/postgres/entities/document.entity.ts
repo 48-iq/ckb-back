@@ -1,5 +1,6 @@
 import { Column, Entity, JoinTable, ManyToMany, ManyToOne, PrimaryGeneratedColumn } from "typeorm"
 import { Message } from "./message.entity"
+import { Contract } from "./contract.entity";
 
 
 @Entity({name: 'documents'})
@@ -14,10 +15,9 @@ export class Document {
   @Column()
   title: string;
 
-  @Column()
-  contract: string;
+  @ManyToMany(() => Message, (message) => message.documents, { eager: false })
+  messages: Message[];
 
-  @ManyToMany(() => Message)
-  @JoinTable()
-  message: Message[];
+  @ManyToOne(() => Contract, { eager: true })
+  contract: Contract;
 }

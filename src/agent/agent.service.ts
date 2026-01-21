@@ -63,7 +63,7 @@ export class AgentService {
       if (message.role === "user") {
         processedMessage.content = `${message.text}` + 
         `${message.documents?"\n=====ДОКУМЕНТЫ=====\n":""}` + 
-        `${message.documents?.map(doc => doc.name).join('\n')}`;
+        `${message.documents?.map(doc => doc.title).join('\n')}`;
       }
       if (i === args.messagesDto.length - 1) {
         processedMessage.content = `=====ГЛАВНЫЙ ВОПРОС=====\n${processedMessage.content}`
@@ -76,8 +76,8 @@ export class AgentService {
     };
   }
   
-  async processChat(messages: MessageDto) {
-    const state = this.createState({ messagesDto: [messages] });
+  async processChat(messages: MessageDto[]) {
+    const state = this.createState({ messagesDto: messages });
     const result = await this.agent.stream(
       state,
       {
