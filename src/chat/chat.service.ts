@@ -190,6 +190,10 @@ export class ChatService {
 
     for await (const [type, data] of result) {
       const event = data.event as string;
+
+      if (type === "updates") {
+        
+      }
     }
 
     chat.isPending = false;

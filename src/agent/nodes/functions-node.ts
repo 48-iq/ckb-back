@@ -19,6 +19,7 @@ export const FunctionsNodeProvider: Provider = {
           lastMessage.function_call.name,
           lastMessage.function_call.arguments
         );
+        
         return { messages: [...messages, { role: "function", content: JSON.stringify(result) }] };
       }
       return { messages };
