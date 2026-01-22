@@ -8,14 +8,14 @@ import { Message } from "src/postgres/entities/message.entity";
 import { AppError } from "src/app.error";
 import { NewUserMessageDto } from "./dto/new-user-message.dto";
 import { WsGateway } from "src/ws/ws.gateway";
-import { ChatUpdateEvent } from "./events/chat-update.event";
+import { ChatUpdatedEvent } from "./events/chat-updated.event";
 import { MessageMapper } from "./mappers/message.mapper";
 import { PageDto } from "./dto/page.dto";
 import { ChatDto } from "./dto/chat.dto";
 import { PageMapper } from "./mappers/page.mapper";
 import { MessageDto } from "./dto/message.dto";
 import { AgentService } from "src/agent/agent.service";
-import { MessageUpdateEvent } from "./events/message-update.event";
+import { MessageUpdatedEvent } from "./events/message-updated.event";
 import { DocumentDto } from "src/document/dto/document.dto";
 import { Neo4jRepository } from "src/neo4j/neo4j.repository";
 import { Document } from "src/postgres/entities/document.entity";
@@ -150,42 +150,49 @@ export class ChatService {
       userId: string;
       newUserMessageDto: NewUserMessageDto;
     }) {
+
     const { userId, newUserMessageDto } = args;
 
+    //Получение чата, если чат был новым, то отправка события о создании чата
     let chat = await this.chatRepository.findOneBy({ id: newUserMessageDto.chatId });
+
     if (!chat) throw new AppError("CHAT_NOT_FOUND");
 
-    let message = this.messageMapper.toEntity({
-      chat,
-      dto: newUserMessageDto
-    });
-
+    const isChatNew = chat.isNew;
     chat.isPending = true;
     chat.isNew = false;
     chat = await this.chatRepository.save(chat);
-    if (!chat) throw new AppError("CHAT_NOT_FOUND");
-    
+
+    if (isChatNew) {
+      const chatCreatedEvent: ChatDto = this.chatMapper.toDto(chat);
+      await this.wsGateway.sendEvent('chatCreated', chatCreatedEvent, userId);
+    }
+
+
+    //создание сообщения, изменение статуса чата и времени последнего сообщения, отправка события о новом сообщении
+    let message = this.messageMapper.toEntity({ chat, dto: newUserMessageDto });
+
     message = await this.messageRepository.save(message);
 
-    const event: ChatUpdateEvent = new ChatUpdateEvent({
+    const newUserMessageEvent: ChatUpdatedEvent = new ChatUpdatedEvent({
       id: chat.id,
       newMessage: this.messageMapper.toDto({
         message: message,
         chat
       }),
-      isPending: chat.isPending
+      isPending: chat.isPending,
+      lastMessageAt: message.createdAt.toISOString()
     });
 
-    await this.wsGateway.sendEvent(
-      'newMessage', event,
-      userId
-    );
+    await this.wsGateway.sendEvent('chatUpdated', newUserMessageEvent, userId);
 
+
+    //получения всех сообщений в чате для передачи агенту
     const qb = this.messageRepository
       .createQueryBuilder('message')
       .where('message.chatId = :chatId', { chatId: chat.id })
       .orderBy('message.createdAt', 'DESC');
-    
+
     const { entities } = await qb.getRawAndEntities();
 
     const chatMessagesDto = entities.map(entity => this.messageMapper.toDto({
@@ -194,66 +201,104 @@ export class ChatService {
       documents: entity.documents.map(doc => ({ document: doc, contract: doc.contract }))
     }));
 
-    const result = await this.agentService.processChat(chatMessagesDto)
 
-    for await (const [type, chunk] of result) {
+    //Передача сообщений агенту
+    const response = await this.agentService.processChat(chatMessagesDto)
+
+
+    //Создание и сохранение сообщения-ответа от агента
+    let responseMessage = new Message();
+    responseMessage.chat = chat;
+    responseMessage.role = "assistant";
+    responseMessage.text = "";
+    responseMessage = await this.messageRepository.save(responseMessage);
+
+
+    //Изменение времени последнего сообщения, отправка события о новом сообщении
+    const newResponseMessageEvent = new ChatUpdatedEvent({
+      id: chat.id,
+      newMessage: this.messageMapper.toDto({
+        message: responseMessage,
+        chat
+      }),
+      isPending: chat.isPending,
+      lastMessageAt: responseMessage.createdAt.toISOString()
+    });
+
+    await this.wsGateway.sendEvent('chatUpdated', newResponseMessageEvent, userId);
+
+
+    //Обработка потокового ответа от агента, отправка событий об обновлении сообщения
+    for await (const [type, chunk] of response) {
       if (type === "custom") {
         if (chunk.type === "result") {
           const data = chunk.data;
-          const messageUpdateEvent = new MessageUpdateEvent({
-            id: message.id,
+
+          const messageUpdateEvent = new MessageUpdatedEvent({
+            id: responseMessage.id,
             chatId: chat.id,
             text: data.text,
             updateText: data.updateText
           });
-          await this.wsGateway.sendEvent(
-            'updateMessage',
-            messageUpdateEvent,
-            userId
-          );
+
+          await this.wsGateway.sendEvent('messageUpdated', messageUpdateEvent, userId);
         }
       }
+
       if (type === "updates") {
+
+        if (chunk.resultNode) {
+          const text: string = chunk.resultNode.result as string;
+
+          responseMessage.text = text;
+
+          responseMessage =  await this.messageRepository.save(responseMessage);
+
+          const messageUpdateEvent = new MessageUpdatedEvent({
+            id: responseMessage.id,
+            chatId: chat.id,
+            text: responseMessage.text
+          });
+          
+          await this.wsGateway.sendEvent('messageUpdated',messageUpdateEvent,userId);
+        }
+
         if (chunk.documentsNode) {
           const documentsNeo4jIds: number[] = chunk.documentsNode.documents as number[];
+
           const documentsPostgresIds: string[] = [];
+
           for (const neo4jId of documentsNeo4jIds) {
             const postgresId = await this.neo4jRepository.getDocumentPostgresId(neo4jId);
             if (postgresId) documentsPostgresIds.push(postgresId);
           }
+          
           const documents: Document[] = [];
-          for (const docId of documentsPostgresIds) {
-            let document = await this.documentRepository.findOneBy({ id: docId });
+
+          for (const postgresId of documentsPostgresIds) {
+            let document = await this.documentRepository.findOneBy({ id: postgresId });
             if (document) {
               documents.push(document);
             }
           }
-          message.documents = documents;
-          message =  await this.messageRepository.save(message);
-          const messageUpdateEvent = new MessageUpdateEvent({
-            id: message.id,
+          responseMessage.documents = documents;
+          responseMessage =  await this.messageRepository.save(responseMessage);
+          const messageUpdateEvent = new MessageUpdatedEvent({
+            id: responseMessage.id,
             chatId: chat.id,
-            documents: message.documents.map(doc => this.documentMapper.toDto({ document: doc, contract: doc.contract })),
+            documents: responseMessage.documents.map(doc => this.documentMapper.toDto({ document: doc, contract: doc.contract })),
           });
-          await this.wsGateway.sendEvent(
-            'updateMessage',
-            messageUpdateEvent,
-            userId
-          );
+          await this.wsGateway.sendEvent('messageUpdated',messageUpdateEvent,userId);
         }
       }
     }
 
     chat.isPending = false;
     chat = await this.chatRepository.save(chat);
-
-    this.wsGateway.sendEvent(
-      'updateChat',
-      new ChatUpdateEvent({
-        id: chat.id,
-        isPending: chat.isPending
-      }),
-      userId
-    );
+    const pendingStopEvent = new ChatUpdatedEvent({
+      id: chat.id,
+      isPending: chat.isPending
+    });
+    this.wsGateway.sendEvent('chatUpdated', pendingStopEvent, userId);
   }
 }
