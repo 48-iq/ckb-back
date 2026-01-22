@@ -20,6 +20,7 @@ import { Neo4jRepository } from "src/neo4j/neo4j.repository";
 import { Document } from "src/postgres/entities/document.entity";
 import { DocumentMapper } from "src/document/mappers/document.mapper";
 import { ChatDeletedEvent } from "./events/chat-deleted.event";
+import { GenerateTitleService } from "./generate-title.service";
 @Injectable()
 export class ChatService {
   
@@ -34,7 +35,8 @@ export class ChatService {
     private readonly chatMapper: ChatMapper,
     private readonly messageMapper: MessageMapper,
     private readonly cursorMapper: CursorMapper,
-    private readonly documentMapper: DocumentMapper
+    private readonly documentMapper: DocumentMapper,
+    private readonly generateTitleService: GenerateTitleService
   ) {}
 
   async deleteChat(chatId: string, userId: string) {
@@ -146,6 +148,7 @@ export class ChatService {
       .where('message.chatId = :chatId', { chatId })
       .andWhere('message.createdAt < :before', { before: new Date(before) })
       .getCount() - limit;
+
     if (itemsLeft < 0) itemsLeft = 0;
 
     const { entities } = await qb.getRawAndEntities();
@@ -161,6 +164,7 @@ export class ChatService {
         });
       }
     });
+
     return messagesCursorDto;
   }
 
@@ -179,10 +183,15 @@ export class ChatService {
     if (chat.isPending) throw new AppError("CHAT_PENDING");
 
     const isChatNew = chat.isNew;
+    
     chat.isPending = true;
     chat.isNew = false;
 
     try {
+      if (isChatNew) {
+        const title = await this.generateTitleService.generateTitle(chat.id)??"Новый чат";
+        chat.title = title;
+      }
       chat = await this.chatRepository.save(chat);
     } catch (error) {
       console.log(error);
@@ -329,7 +338,7 @@ export class ChatService {
           try {
             responseMessage = await this.messageRepository.save(responseMessage);
           } catch(error) {
-            console.log(e);
+            console.log(error);
             throw new AppError("SEND_MESSAGE_INTERRUPTED");
           }
           const messageUpdateEvent = new MessageUpdatedEvent({

@@ -7,4 +7,4 @@ import { CursorMapper } from "./mappers/cursor.mapper";
   providers: [CursorMapper],
   exports: [CursorMapper],
 })
-export class ShareModule {}
+export class SharedModule {}
