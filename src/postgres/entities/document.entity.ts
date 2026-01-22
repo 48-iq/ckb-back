@@ -15,7 +15,7 @@ export class Document {
   @Column()
   title: string;
 
-  @ManyToMany(() => Message, (message) => message.documents, { eager: false })
+  @ManyToMany(() => Message, (message) => message.documents, { eager: false, cascade: ["insert", "update"] })
   messages: Message[];
 
   @ManyToOne(() => Contract, { eager: true })

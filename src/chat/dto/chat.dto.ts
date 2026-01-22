@@ -5,6 +5,7 @@ export class ChatDto {
   lastMessageAt?: string;
   isPending: boolean;
   createdAt: string;
+  isNew: boolean;
 
   constructor(partial?: Partial<ChatDto>) {
     if (partial)

@@ -14,25 +14,26 @@ export const ResultNodeProvider: Provider = {
   useFactory: (model: GigaChat) => {
     return async (state: typeof State.State, config: LangGraphRunnableConfig) => {
       const { messages } = state;
-      const response = model.stream({
+
+      let text = '';
+      for await (const chunk of model.stream({
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           ...messages,
         ],
         temperature: 0,
-        stream: true,
-      });
-      let result = '';
-
-      for await (const chunk of response) {
-        const content = chunk.choices[0]?.delta.content||'';
+      })) {
+        const updateText = chunk.choices[0]?.delta.content||'';
+        text += updateText;
         if (config.writer) {
-          config.writer({ type: 'updateResult', result: result });
+          config.writer({ type: "result", data: {
+            updateText,
+            text
+          } });
         }
-        result += content;
       }
       
-      return { result };
+      return { result: text };
     }
   }
 }
@@ -46,7 +47,7 @@ const SYSTEM_PROMPT = `
 
 Твоя задача составить лаконичный, аргументированный ответ на вопрос пользователя, похожий на ответ в чате, 
 в котором не будут упоминания графа, id узлов, название инструментов, упоминания того, что ты агент, фраз о том, 
-что агент анализировал данные. 
+что ты или агент анализировал данные или полученную информацию. 
 
 Аргументами могут служить отрывки из текста, например: в документах указано "...Зиновьев обязуется сделать ремонт на Вавилова д. 6...",
 а также логические сопоставления, например: Единственным подрядчиком фигурирующим в документе о ремонте на Вавилова д. 6, является Зиновьев.

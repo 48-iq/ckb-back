@@ -15,6 +15,11 @@ import { ChatDto } from "./dto/chat.dto";
 import { PageMapper } from "./mappers/page.mapper";
 import { MessageDto } from "./dto/message.dto";
 import { AgentService } from "src/agent/agent.service";
+import { MessageUpdateEvent } from "./events/message-update.event";
+import { DocumentDto } from "src/document/dto/document.dto";
+import { Neo4jRepository } from "src/neo4j/neo4j.repository";
+import { Document } from "src/postgres/entities/document.entity";
+import { DocumentMapper } from "src/document/mappers/document.mapper";
 @Injectable()
 export class ChatService {
   
@@ -22,11 +27,14 @@ export class ChatService {
     @InjectRepository(Chat) private readonly chatRepository: Repository<Chat>,
     @InjectRepository(User) private readonly userRepository: Repository<User>,
     @InjectRepository(Message) private readonly messageRepository: Repository<Message>, 
+    @InjectRepository(Document) private readonly documentRepository: Repository<Document>,
+    private readonly neo4jRepository: Neo4jRepository,
     private readonly agentService: AgentService,
     private readonly wsGateway: WsGateway,
     private readonly chatMapper: ChatMapper,
     private readonly messageMapper: MessageMapper,
-    private readonly pageMapper: PageMapper
+    private readonly pageMapper: PageMapper,
+    private readonly documentMapper: DocumentMapper
   ) {}
 
   async getNewChat(userId: string) {
@@ -188,11 +196,51 @@ export class ChatService {
 
     const result = await this.agentService.processChat(chatMessagesDto)
 
-    for await (const [type, data] of result) {
-      const event = data.event as string;
-
+    for await (const [type, chunk] of result) {
+      if (type === "custom") {
+        if (chunk.type === "result") {
+          const data = chunk.data;
+          const messageUpdateEvent = new MessageUpdateEvent({
+            id: message.id,
+            chatId: chat.id,
+            text: data.text,
+            updateText: data.updateText
+          });
+          await this.wsGateway.sendEvent(
+            'updateMessage',
+            messageUpdateEvent,
+            userId
+          );
+        }
+      }
       if (type === "updates") {
-        
+        if (chunk.documentsNode) {
+          const documentsNeo4jIds: number[] = chunk.documentsNode.documents as number[];
+          const documentsPostgresIds: string[] = [];
+          for (const neo4jId of documentsNeo4jIds) {
+            const postgresId = await this.neo4jRepository.getDocumentPostgresId(neo4jId);
+            if (postgresId) documentsPostgresIds.push(postgresId);
+          }
+          const documents: Document[] = [];
+          for (const docId of documentsPostgresIds) {
+            let document = await this.documentRepository.findOneBy({ id: docId });
+            if (document) {
+              documents.push(document);
+            }
+          }
+          message.documents = documents;
+          message =  await this.messageRepository.save(message);
+          const messageUpdateEvent = new MessageUpdateEvent({
+            id: message.id,
+            chatId: chat.id,
+            documents: message.documents.map(doc => this.documentMapper.toDto({ document: doc, contract: doc.contract })),
+          });
+          await this.wsGateway.sendEvent(
+            'updateMessage',
+            messageUpdateEvent,
+            userId
+          );
+        }
       }
     }
 

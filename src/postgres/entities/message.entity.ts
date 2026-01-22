@@ -21,6 +21,6 @@ export class Message {
   @JoinTable()
   chat: Chat;
 
-  @ManyToMany(() => Document, (document) => document.messages, { eager: true })
+  @ManyToMany(() => Document, (document) => document.messages, { eager: true, cascade: ["insert", "update"] })
   documents: Document[];
 }

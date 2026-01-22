@@ -32,11 +32,11 @@ export const DocumentNodeProvider: Provider = {
         return response.choices[0].message.content;
       }
       for (let i = 0; i < maxParseRetry; i++) {
-        const answer = await tryAnswer();
-        const parsed = documentResultSchema.safeParse(answer);
-        if (parsed.success) {
-          return { documents: parsed.data.documents };
-        } else {
+        const answer = await tryAnswer()??'';
+        try {
+          const parsed = documentResultSchema.parse(JSON.parse(answer));
+          return { documents: parsed.documents };
+        } catch (e) {
           continue;
         }
       }
@@ -64,7 +64,7 @@ const SYSTEM_PROMPT = `
 ###
 Твоя задача определить на основе каких документов агент ответил на вопрос и выдать ответ в JSON формате:
 {
-  documents: number[]
+  "documents": number[]
 }
 
 Выведи информацию только о тех документах, которые были использованы в ответе, не описывай все полученный предыдущим агентом документы.

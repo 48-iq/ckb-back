@@ -13,6 +13,7 @@ export class ChatMapper {
       isPending: chat.isPending,
       lastMessageAt: chat.lastMessageAt?.toISOString(),
       createdAt: chat.createdAt.toISOString(),
+      isNew: chat.isNew
     });
   }
 }
