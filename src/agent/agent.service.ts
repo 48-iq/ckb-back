@@ -18,6 +18,8 @@ export class AgentService {
     string
   >;
 
+  private readonly abortMap = new Map<string, AbortController>();
+
   private shouldContinueEdge = (state: typeof State.State) => {
     const { messages } = state;
     const lastMessage = messages.at(-1);
@@ -76,15 +78,26 @@ export class AgentService {
     };
   }
   
-  async processChat(messages: MessageDto[]) {
+  async processChat(messages: MessageDto[], chatId: string) {
+    const abortController = new AbortController();
+    this.abortMap.set(chatId, abortController);
     const state = this.createState({ messagesDto: messages });
     const result = await this.agent.stream(
       state,
       {
-        streamMode: ["custom", "updates"]
-      }
+        streamMode: ["custom", "updates"],
+        signal: abortController.signal
+      },
     )
     return result;
+  }
+
+  async stopChat(chatId: string) {
+    const abortController = this.abortMap.get(chatId);
+    if (abortController) {
+      abortController.abort();
+      this.abortMap.delete(chatId);
+    }
   }
   
 }

@@ -4,7 +4,7 @@ import { UserService } from "./user.service";
 import { LoginDto } from "./dto/login.dto";
 import { JwtDto } from "./dto/jwt.dto";
 import bcrypt from "bcryptjs";
-import { AppError } from "src/app.error";
+import { AppError } from "src/shared/errors/app.error";
 
 
 @Injectable()

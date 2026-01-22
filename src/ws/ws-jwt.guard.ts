@@ -4,7 +4,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Socket } from 'socket.io';
-import { AppError } from 'src/app.error';
+import { AppError } from 'src/shared/errors/app.error';
 import { JwtService } from 'src/auth/jwt.service';
 
 @Injectable()

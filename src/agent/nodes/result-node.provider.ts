@@ -13,6 +13,7 @@ export const ResultNodeProvider: Provider = {
   inject: [GIGACHAT],
   useFactory: (model: GigaChat) => {
     return async (state: typeof State.State, config: LangGraphRunnableConfig) => {
+      
       const { messages } = state;
 
       let text = '';
@@ -23,6 +24,7 @@ export const ResultNodeProvider: Provider = {
         ],
         temperature: 0,
       })) {
+        if (config.signal?.aborted) return;
         const updateText = chunk.choices[0]?.delta.content||'';
         text += updateText;
         if (config.writer) {

@@ -1,31 +1,43 @@
-import { Column, CreateDateColumn, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm"
-import { User } from "./user.entity"
-import { Message } from "./message.entity"
+import { 
+  Column, 
+  CreateDateColumn, 
+  Entity, 
+  ManyToOne, 
+  OneToMany, 
+  PrimaryGeneratedColumn, 
+  VersionColumn 
+} from "typeorm";
+import { User } from "./user.entity";
+import { Message } from "./message.entity";
 
 
 @Entity({ name: 'chats' })
 export class Chat {
 
   @PrimaryGeneratedColumn('uuid')
-  id: string
+  id: string;
 
   @Column()
-  title: string
+  title: string;
 
   @Column()
-  isNew: boolean
+  isNew: boolean;
 
   @Column()
-  isPending: boolean
+  isPending: boolean;
 
   @CreateDateColumn()
-  createdAt: Date
+  createdAt: Date;
 
   @ManyToOne(() => User, user => user.chats)
-  user: User
+  user: User;
 
   @OneToMany(() => Message, message => message.chat)
-  messages: Message[]
+  messages: Message[];
 
-  lastMessageAt?: Date
+  @VersionColumn()
+  version: number;
+
+  lastMessageAt?: Date;
+
 }

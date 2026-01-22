@@ -26,6 +26,7 @@ export const AgentNodeProvider: Provider = {
         ],
         function_call: "auto",
         functions: functionsService.getFunctions()
+        
       });
 
       return { messages: [...messages, response] };

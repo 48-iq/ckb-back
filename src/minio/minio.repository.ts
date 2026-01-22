@@ -1,7 +1,7 @@
 import { Injectable, OnApplicationBootstrap} from "@nestjs/common";
 import { InjectMinio } from "./minio.decorator";
 import * as Minio from 'minio';
-import { AppError } from "src/app.error";
+import { AppError } from "src/shared/errors/app.error";
 
 @Injectable()
 export class MinioRepository implements OnApplicationBootstrap {

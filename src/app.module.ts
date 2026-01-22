@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm'
 import Joi from 'joi'
 import { ChatModule } from './chat/chat.module'
 import { AuthModule } from './auth/auth.module'
+import { ShareModule } from './shared/share.module'
 
 @Module({
   imports: [
@@ -48,7 +49,8 @@ import { AuthModule } from './auth/auth.module'
       }
     }),
     ChatModule,
-    AuthModule
+    AuthModule,
+    ShareModule
   ],
 })
 export class AppModule {}

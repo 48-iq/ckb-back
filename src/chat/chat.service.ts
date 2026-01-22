@@ -5,21 +5,21 @@ import { User } from "src/postgres/entities/user.entity";
 import { Repository } from "typeorm";
 import { ChatMapper } from "./mappers/chat.mapper";
 import { Message } from "src/postgres/entities/message.entity";
-import { AppError } from "src/app.error";
+import { AppError } from "src/shared/errors/app.error";
 import { NewUserMessageDto } from "./dto/new-user-message.dto";
 import { WsGateway } from "src/ws/ws.gateway";
 import { ChatUpdatedEvent } from "./events/chat-updated.event";
 import { MessageMapper } from "./mappers/message.mapper";
-import { CursorDto } from "./dto/cursor.dto";
+import { CursorDto } from "../shared/dto/cursor.dto";
 import { ChatDto } from "./dto/chat.dto";
-import { CursorMapper } from "./mappers/cursor.mapper";
+import { CursorMapper } from "../shared/mappers/cursor.mapper";
 import { MessageDto } from "./dto/message.dto";
 import { AgentService } from "src/agent/agent.service";
 import { MessageUpdatedEvent } from "./events/message-updated.event";
-import { DocumentDto } from "src/document/dto/document.dto";
 import { Neo4jRepository } from "src/neo4j/neo4j.repository";
 import { Document } from "src/postgres/entities/document.entity";
 import { DocumentMapper } from "src/document/mappers/document.mapper";
+import { ChatDeletedEvent } from "./events/chat-deleted.event";
 @Injectable()
 export class ChatService {
   
@@ -40,7 +40,13 @@ export class ChatService {
   async deleteChat(chatId: string, userId: string) {
     const chat = await this.chatRepository.findOneBy({ id: chatId });
     if (chat?.user.id !== userId) throw new AppError("PERMISSION_DENIED");
-    await this.chatRepository.remove(chat!);
+    if (chat && !chat.isNew) {
+      if (chat.isPending) {
+        await this.agentService.stopChat(chatId);
+      }
+      await this.chatRepository.remove(chat);
+      this.wsGateway.sendEvent('chatDeleted', new ChatDeletedEvent(chatId), userId);
+    }
   }
 
   async getNewChat(userId: string) {
@@ -125,11 +131,12 @@ export class ChatService {
     const chat = await this.chatRepository.findOneBy({ id: chatId });
 
     if (!chat) throw new AppError("CHAT_NOT_FOUND");
-
     if (chat.user.id !== userId) throw new AppError("PERMISSION_DENIED");
 
     const qb = this.messageRepository
       .createQueryBuilder('message')
+      .leftJoinAndSelect('message.documents', 'document')
+      .leftJoinAndSelect('document.contract', 'contract')
       .where('message.chatId = :chatId', { chatId })
       .andWhere('message.createdAt < :before', { before: new Date(before) })
       .take(limit);
@@ -168,13 +175,20 @@ export class ChatService {
     let chat = await this.chatRepository.findOneBy({ id: newUserMessageDto.chatId });
 
     if (!chat) throw new AppError("CHAT_NOT_FOUND");
-
     if (chat.user.id !== userId) throw new AppError("PERMISSION_DENIED");
+    if (chat.isPending) throw new AppError("CHAT_PENDING");
 
     const isChatNew = chat.isNew;
     chat.isPending = true;
     chat.isNew = false;
-    chat = await this.chatRepository.save(chat);
+
+    try {
+      chat = await this.chatRepository.save(chat);
+    } catch (error) {
+      console.log(error);
+      throw new AppError("SEND_MESSAGE_INTERRUPTED");
+    }
+
 
     if (isChatNew) {
       const chatCreatedEvent: ChatDto = this.chatMapper.toDto(chat);
@@ -185,7 +199,12 @@ export class ChatService {
     //создание сообщения, изменение статуса чата и времени последнего сообщения, отправка события о новом сообщении
     let message = this.messageMapper.toEntity({ chat, dto: newUserMessageDto });
 
-    message = await this.messageRepository.save(message);
+    try {
+      message = await this.messageRepository.save(message);
+    } catch (error) {
+      console.log(error);
+      throw new AppError("SEND_MESSAGE_INTERRUPTED");
+    }
 
     const newUserMessageEvent: ChatUpdatedEvent = new ChatUpdatedEvent({
       id: chat.id,
@@ -214,9 +233,11 @@ export class ChatService {
       documents: entity.documents.map(doc => ({ document: doc, contract: doc.contract }))
     }));
 
+    if (chatMessagesDto.length === 0) throw new AppError("SEND_MESSAGE_INTERRUPTED");
+
 
     //Передача сообщений агенту
-    const response = await this.agentService.processChat(chatMessagesDto)
+    const response = await this.agentService.processChat(chatMessagesDto, chat.id)
 
 
     //Создание и сохранение сообщения-ответа от агента
@@ -224,7 +245,12 @@ export class ChatService {
     responseMessage.chat = chat;
     responseMessage.role = "assistant";
     responseMessage.text = "";
-    responseMessage = await this.messageRepository.save(responseMessage);
+    try {
+      responseMessage = await this.messageRepository.save(responseMessage);
+    } catch (error) {
+      console.log(error);
+      throw new AppError("SEND_MESSAGE_INTERRUPTED");
+    }
 
 
     //Изменение времени последнего сообщения, отправка события о новом сообщении
@@ -265,7 +291,12 @@ export class ChatService {
 
           responseMessage.text = text;
 
-          responseMessage =  await this.messageRepository.save(responseMessage);
+          try {
+            responseMessage =  await this.messageRepository.save(responseMessage);
+          } catch (error) {
+            console.log(error);
+            throw new AppError("SEND_MESSAGE_INTERRUPTED");
+          }
 
           const messageUpdateEvent = new MessageUpdatedEvent({
             id: responseMessage.id,
@@ -295,19 +326,29 @@ export class ChatService {
             }
           }
           responseMessage.documents = documents;
-          responseMessage =  await this.messageRepository.save(responseMessage);
+          try {
+            responseMessage = await this.messageRepository.save(responseMessage);
+          } catch(error) {
+            console.log(e);
+            throw new AppError("SEND_MESSAGE_INTERRUPTED");
+          }
           const messageUpdateEvent = new MessageUpdatedEvent({
             id: responseMessage.id,
             chatId: chat.id,
             documents: responseMessage.documents.map(doc => this.documentMapper.toDto({ document: doc, contract: doc.contract })),
           });
-          await this.wsGateway.sendEvent('messageUpdated',messageUpdateEvent,userId);
+          await this.wsGateway.sendEvent('messageUpdated', messageUpdateEvent, userId);
         }
       }
     }
 
     chat.isPending = false;
-    chat = await this.chatRepository.save(chat);
+    try {
+      chat = await this.chatRepository.save(chat);
+    } catch (error) {
+      console.log(error);
+      throw new AppError("SEND_MESSAGE_INTERRUPTED");
+    }
     const pendingStopEvent = new ChatUpdatedEvent({
       id: chat.id,
       isPending: chat.isPending

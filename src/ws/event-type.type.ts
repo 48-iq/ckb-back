@@ -1,4 +1,8 @@
 export type EventType = 
 | "chatCreated"
 | "chatUpdated"
-| "messageUpdated";
+| "chatDeleted"
+| "messageUpdated"
+| "documentCreated"
+| "documentUpdated"
+| "documentDeleted";
