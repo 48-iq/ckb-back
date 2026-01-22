@@ -10,9 +10,9 @@ import { NewUserMessageDto } from "./dto/new-user-message.dto";
 import { WsGateway } from "src/ws/ws.gateway";
 import { ChatUpdatedEvent } from "./events/chat-updated.event";
 import { MessageMapper } from "./mappers/message.mapper";
-import { PageDto } from "./dto/page.dto";
+import { CursorDto } from "./dto/cursor.dto";
 import { ChatDto } from "./dto/chat.dto";
-import { PageMapper } from "./mappers/page.mapper";
+import { CursorMapper } from "./mappers/cursor.mapper";
 import { MessageDto } from "./dto/message.dto";
 import { AgentService } from "src/agent/agent.service";
 import { MessageUpdatedEvent } from "./events/message-updated.event";
@@ -33,9 +33,15 @@ export class ChatService {
     private readonly wsGateway: WsGateway,
     private readonly chatMapper: ChatMapper,
     private readonly messageMapper: MessageMapper,
-    private readonly pageMapper: PageMapper,
+    private readonly cursorMapper: CursorMapper,
     private readonly documentMapper: DocumentMapper
   ) {}
+
+  async deleteChat(chatId: string, userId: string) {
+    const chat = await this.chatRepository.findOneBy({ id: chatId });
+    if (chat?.user.id !== userId) throw new AppError("PERMISSION_DENIED");
+    await this.chatRepository.remove(chat!);
+  }
 
   async getNewChat(userId: string) {
     const user = await this.userRepository.findOneByOrFail({ id: userId })
@@ -60,24 +66,19 @@ export class ChatService {
 
   async getUserChats(args: {
     userId: string;
-    page: number;
-    size: number;
-  }): Promise<PageDto<ChatDto>> {
-    const { userId, page, size } = args;
+    before: string;
+    limit: number;
+  }): Promise<CursorDto<ChatDto>> {
+    const { userId, before, limit } = args;
     const user = await this.userRepository.findOneBy({ id: userId });
 
     if (!user) throw new AppError("USER_NOT_FOUND");
-
-    const totalItems = await this.chatRepository
-      .createQueryBuilder('chat')
-      .where('chat.isNew = false')
-      .andWhere('chat.userId = :userId', { userId })
-      .getCount();
 
     const qb = this.chatRepository
       .createQueryBuilder('chat')
       .where('chat.isNew = false')
       .andWhere('chat.userId = :userId', { userId })
+      .andWhere('chat.createdAt < :before', { before: new Date(before) })
       .addSelect(subQuery => {
         return subQuery
           .select('MAX(message.createdAt)')
@@ -85,8 +86,16 @@ export class ChatService {
           .where('message.chatId = chat.id')
       }, 'lastMessageAt')
       .orderBy('lastMessageAt', 'DESC')
-      .skip((page - 1) * size)
-      .take(size);
+      .take(limit);
+
+    let itemsLeft = await this.chatRepository
+      .createQueryBuilder('chat')
+      .where('chat.isNew = false')
+      .andWhere('chat.userId = :userId', { userId })
+      .andWhere('chat.createdAt < :before', { before: new Date(before) })
+      .getCount() - limit;
+    
+    if (itemsLeft < 0) itemsLeft = 0;
 
     const { entities, raw } = await qb.getRawAndEntities();
 
@@ -94,47 +103,49 @@ export class ChatService {
       chat.lastMessageAt = raw[index].lastMessageAt
     });
 
-    const chatPageDto = this.pageMapper.toDto<Chat, ChatDto>({
-      page,
-      size,
-      totalItems,
+    const chatsCursorDto = this.cursorMapper.toDto<Chat, ChatDto>({
+      itemsLeft,
       data: entities,
       dataMapper: (entity: Chat) => {
         return this.chatMapper.toDto(entity);
       }
-    })
-    return chatPageDto;
+    });
+
+    return chatsCursorDto;
   }
 
   async getChatMessages(args: {
     chatId: string;
-    page: number;
-    size: number;
+    userId: string;
+    before: string;
+    limit: number;
   }) {
-    const { chatId, page, size } = args;
+    const { chatId, before, limit, userId } = args;
 
     const chat = await this.chatRepository.findOneBy({ id: chatId });
 
     if (!chat) throw new AppError("CHAT_NOT_FOUND");
 
-    const totalItems = await this.messageRepository
-      .createQueryBuilder('message')
-      .where('message.chatId = :chatId', { chatId })
-      .getCount();
+    if (chat.user.id !== userId) throw new AppError("PERMISSION_DENIED");
 
     const qb = this.messageRepository
       .createQueryBuilder('message')
       .where('message.chatId = :chatId', { chatId })
-      .skip((page - 1) * size)
-      .take(size);
+      .andWhere('message.createdAt < :before', { before: new Date(before) })
+      .take(limit);
+
+    let itemsLeft = await this.messageRepository
+      .createQueryBuilder('message')
+      .where('message.chatId = :chatId', { chatId })
+      .andWhere('message.createdAt < :before', { before: new Date(before) })
+      .getCount() - limit;
+    if (itemsLeft < 0) itemsLeft = 0;
 
     const { entities } = await qb.getRawAndEntities();
 
-    const messagePageDto = this.pageMapper.toDto<Message, MessageDto>({
+    const messagesCursorDto = this.cursorMapper.toDto<Message, MessageDto>({
       data: entities,
-      page,
-      size,
-      totalItems,
+      itemsLeft,
       dataMapper: (entity: Message) => {
         return this.messageMapper.toDto({ 
           message: entity, 
@@ -143,7 +154,7 @@ export class ChatService {
         });
       }
     });
-    return messagePageDto;
+    return messagesCursorDto;
   }
 
   async sendMessage(args: {
@@ -157,6 +168,8 @@ export class ChatService {
     let chat = await this.chatRepository.findOneBy({ id: newUserMessageDto.chatId });
 
     if (!chat) throw new AppError("CHAT_NOT_FOUND");
+
+    if (chat.user.id !== userId) throw new AppError("PERMISSION_DENIED");
 
     const isChatNew = chat.isNew;
     chat.isPending = true;
