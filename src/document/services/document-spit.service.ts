@@ -4,7 +4,7 @@ const pdfjsLib = require('pdfjs-dist/legacy/build/pdf');
 (pdfjsLib as any).GlobalWorkerOptions.workerSrc = null;
 
 @Injectable()
-export class PdfSplitService {
+export class DocumentSplitService {
   async splitToPages(pdfBuffer: Buffer): Promise<string[]> {
     const loadingTask = pdfjsLib.getDocument({ data: pdfBuffer });
     const pdf = await loadingTask.promise;

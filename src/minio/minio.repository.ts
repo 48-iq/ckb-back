@@ -6,21 +6,21 @@ import { AppError } from "src/shared/errors/app.error";
 @Injectable()
 export class MinioRepository implements OnApplicationBootstrap {
 
-  readonly documentsBacketName = 'documents';
+  readonly documentsBucketName = 'documents';
 
   constructor(
     @InjectMinio() private readonly minio: Minio.Client
   ) {}
   async onApplicationBootstrap() {
-    const exists = await this.minio.bucketExists(this.documentsBacketName);
+    const exists = await this.minio.bucketExists(this.documentsBucketName);
     if (!exists) {
-      await this.minio.makeBucket(this.documentsBacketName);
+      await this.minio.makeBucket(this.documentsBucketName);
     }
   }
 
-  async saveDocument(file: Express.Multer.File, filename: string) {
+  async saveDocument(buffer: Buffer, filename: string) {
     try {
-      const result = await this.minio.putObject(this.documentsBacketName, filename, file.buffer, file.size);
+      const result = await this.minio.putObject(this.documentsBucketName, filename, buffer, buffer.length);
       return result;
     } catch (e) {
       throw new AppError("SAVE_FILE_ERROR", e);
@@ -29,7 +29,7 @@ export class MinioRepository implements OnApplicationBootstrap {
 
   async getDocument(filename: string) {
     try {
-      const result = await this.minio.getObject(this.documentsBacketName, filename);
+      const result = await this.minio.getObject(this.documentsBucketName, filename);
       return result;
     } catch (e) {
       throw new AppError("SAVE_FILE_ERROR", e);

@@ -10,9 +10,6 @@ export class Document {
   id: string;
 
   @Column()
-  filename: string
-
-  @Column()
   title: string;
 
   @ManyToMany(() => Message, (message) => message.documents, { eager: false, cascade: ["insert", "update"] })

@@ -19,7 +19,7 @@ export class DocumentMapper {
     contract: Contract
   }) {
     const { document, contract } = args;
-    const link = `${this.host}/document/${document.id}`;
+    const link = `${this.host}/documents/${document.id}`;
     return new DocumentDto({
       id: document.id,
       link,
