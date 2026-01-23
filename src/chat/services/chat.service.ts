@@ -3,23 +3,23 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Chat } from "src/postgres/entities/chat.entity";
 import { User } from "src/postgres/entities/user.entity";
 import { Repository } from "typeorm";
-import { ChatMapper } from "./mappers/chat.mapper";
+import { ChatMapper } from "../mappers/chat.mapper";
 import { Message } from "src/postgres/entities/message.entity";
 import { AppError } from "src/shared/errors/app.error";
-import { NewUserMessageDto } from "./dto/new-user-message.dto";
+import { NewUserMessageDto } from "../dto/new-user-message.dto";
 import { WsGateway } from "src/ws/ws.gateway";
-import { ChatUpdatedEvent } from "./events/chat-updated.event";
-import { MessageMapper } from "./mappers/message.mapper";
-import { CursorDto } from "../shared/dto/cursor.dto";
-import { ChatDto } from "./dto/chat.dto";
-import { CursorMapper } from "../shared/mappers/cursor.mapper";
-import { MessageDto } from "./dto/message.dto";
-import { AgentService } from "src/agent/agent.service";
-import { MessageUpdatedEvent } from "./events/message-updated.event";
+import { ChatUpdatedEvent } from "../events/chat-updated.event";
+import { MessageMapper } from "../mappers/message.mapper";
+import { CursorDto } from "../../shared/dto/cursor.dto";
+import { ChatDto } from "../dto/chat.dto";
+import { CursorMapper } from "../../shared/mappers/cursor.mapper";
+import { MessageDto } from "../dto/message.dto";
+import { AgentService } from "src/agent/services/agent.service";
+import { MessageUpdatedEvent } from "../events/message-updated.event";
 import { Neo4jRepository } from "src/neo4j/neo4j.repository";
 import { Document } from "src/postgres/entities/document.entity";
 import { DocumentMapper } from "src/document/mappers/document.mapper";
-import { ChatDeletedEvent } from "./events/chat-deleted.event";
+import { ChatDeletedEvent } from "../events/chat-deleted.event";
 import { GenerateTitleService } from "./generate-title.service";
 @Injectable()
 export class ChatService {
@@ -183,7 +183,7 @@ export class ChatService {
     if (chat.isPending) throw new AppError("CHAT_PENDING");
 
     const isChatNew = chat.isNew;
-    
+
     chat.isPending = true;
     chat.isNew = false;
 

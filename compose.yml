@@ -4,12 +4,99 @@ services:
   app:
     build: .
     ports:
-      - 8080:3000
+      - 0000:3000
     environment:
-      - GIGACHAT_API_KEY=value
-      - JWT_SECRET=value
+      - GIGACHAT_API_KEY=${GIGACHAT_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+      - MINIO_PASSWORD=${MINIO_PASSWORD}
+      - APP_HOST=${APP_HOST}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    networks:
+      net_back:
+    restart: unless-stopped
+
+  postgres:
+    image: postgres
+    volumes:
+      - postgres-data:/data/postgres
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: postgres
+      POSTGRES_DB: ckb_app
+    ports:
+      - 0000:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ckb_app"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      net_back:
+    restart: unless-stopped
+      
+
+  neo4j:
+    image: neo4j
+    ports:
+      - "0000:7474"
+      - "0000:7687"
+    volumes:
+      - neo4j-data:/data
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD}
+      NEO4J_server_jvm_additional: "--add-modules=jdk.incubator.vector"
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p $${NEO4J_AUTH##*/} -a bolt://localhost:7687 'RETURN 1' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      net_back:
+    restart: unless-stopped
+
+  minio:
+    image: quay.io/minio/minio:latest
+    ports:
+      - "0000:9000"
+      - "0000:9001"
+    command: [ "server", "--console-address", ":9001", "/data" ]
+    volumes:
+      - minio-data:/data
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
+    networks:
+      net_back:
+    restart: unless-stopped
 
   gotenberg:
     image: gotenberg/gotenberg:8
+    container_name: gotenberg
+    ports:
+      - "0000:3000"
+    command:
+      - "gotenberg"
+      - "--api-port=3000"
+      - "--log-level=info"
+    restart: unless-stopped
+
+
+networks:
+  net_back:
+  
+volumes:
+  neo4j-data:
+  minio-data:
+  postgres-data:
+  
 
 

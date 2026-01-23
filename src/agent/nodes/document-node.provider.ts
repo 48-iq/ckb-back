@@ -14,7 +14,7 @@ const documentResultSchema = z.object({
 export const DocumentNodeProvider: Provider = {
   provide: DOCUMENT_NODE,
   inject: [GIGACHAT, ConfigService],
-  useFactory: (model: GigaChat, configService: ConfigService) => {
+  useFactory: async (model: GigaChat, configService: ConfigService) => {
 
     const maxParseRetry = +(configService.get<string>('MAX_PARSE_RETRY') || '5');
 

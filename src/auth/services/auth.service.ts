@@ -1,8 +1,8 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { JwtService } from "./jwt.service";
 import { UserService } from "./user.service";
-import { LoginDto } from "./dto/login.dto";
-import { JwtDto } from "./dto/jwt.dto";
+import { LoginDto } from "../dto/login.dto";
+import { JwtDto } from "../dto/jwt.dto";
 import bcrypt from "bcryptjs";
 import { AppError } from "src/shared/errors/app.error";
 
@@ -11,8 +11,8 @@ import { AppError } from "src/shared/errors/app.error";
 export class AuthService {
 
   constructor(
-    @Inject() private readonly jwtService: JwtService,
-    @Inject() private readonly userService: UserService,
+    private readonly jwtService: JwtService,
+    private readonly userService: UserService,
   ) {}
 
   async login(loginDto: LoginDto): Promise<JwtDto> {

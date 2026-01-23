@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { AppError, AppErrors } from "src/shared/errors/app.error";
 import { User } from "src/postgres/entities/user.entity";

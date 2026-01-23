@@ -38,6 +38,7 @@ export const AppErrors = {
   FILE_NOT_FOUND: {httpCode: HttpStatus.NOT_FOUND, message: 'File not found'},
   CHAT_PENDING: {httpCode: HttpStatus.CONFLICT, message: 'Chat pending'},
   SEND_MESSAGE_INTERRUPTED: {httpCode: HttpStatus.LOCKED, message: 'Send message interrupted'},
+  DOCUMENT_PARSE_ERROR: {httpCode: HttpStatus.INTERNAL_SERVER_ERROR, message: 'Document parse error'},
 } as const satisfies Record<string, AppErrorDescriptor>
 
 

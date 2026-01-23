@@ -1,5 +1,5 @@
 import { Provider } from "@nestjs/common";
-import { FunctionsService } from "../functions.service";
+import { FunctionsService } from "../services/functions.service";
 import { State } from "../agent.state";
 import { ConfigService } from "@nestjs/config";
 

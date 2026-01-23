@@ -8,11 +8,12 @@ export const Neo4jDriverProvider: Provider = {
   provide: NEO4J_DRIVER,
   useFactory: async (configService: ConfigService): Promise<Driver> => {
 
-    const url = configService.getOrThrow<string>('NEO4J_URL')!;
-    const user = configService.getOrThrow<string>('NEO4J_USER')!;
+    const host = configService.getOrThrow<string>('NEO4J_HOST');
+    const port = configService.getOrThrow<string>('NEO4J_PORT');
+    const user = configService.getOrThrow<string>('NEO4J_USER');
     const password = configService.getOrThrow<string>('NEO4J_PASSWORD')!;
 
-    const driver = neo4j.driver(url, neo4j.auth.basic(user, password));
+    const driver = neo4j.driver(`neo4j://${host}:${port}`, neo4j.auth.basic(user, password));
 
     driver.verifyConnectivity();
 

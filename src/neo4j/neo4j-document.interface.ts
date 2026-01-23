@@ -1,4 +1,4 @@
-export interface NewDocument {
+export interface Neo4jDocument {
   contract: {
     name: string;
     nameEmbedding: number[];

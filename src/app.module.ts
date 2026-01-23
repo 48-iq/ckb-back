@@ -5,6 +5,10 @@ import Joi from 'joi'
 import { ChatModule } from './chat/chat.module'
 import { AuthModule } from './auth/auth.module'
 import { SharedModule } from './shared/shared.module'
+import { AgentModule } from './agent/agent.module'
+import { GigaChatModule } from './gigachat/gigachat.module'
+import { EmbeddingModule } from './embedding/embedding.module'
+import { Neo4jModule } from './neo4j/neo4j.module'
 
 @Module({
   imports: [
@@ -12,22 +16,39 @@ import { SharedModule } from './shared/shared.module'
       isGlobal: true,
       validationSchema: Joi.object({
         APP_HOST: Joi.string().required(),
+
         POSTGRES_HOST: Joi.string().required(),
         POSTGRES_PORT: Joi.number().required(),
         POSTGRES_USER: Joi.string().required(),
         POSTGRES_PASSWORD: Joi.string().required(),
         POSTGRES_DB: Joi.string().required(),
+
         GIGACHAT_API_KEY: Joi.string().required(),
         GIGACHAT_MODEL: Joi.string().optional(),
         GIGACHAT_SCOPE: Joi.string().optional(),
         GIGACHAT_TIMEOUT: Joi.number().optional(),
+
+        MINIO_USER: Joi.string().required(),
+        MINIO_PASSWORD: Joi.string().required(),
+        MINIO_HOST: Joi.string().required(),
+        MINIO_PORT: Joi.number().required(),
+
         JWT_SECRET: Joi.string().required(),
-        JWT_ISSUER: Joi.string().required(),
-        JWT_AUDIENCE: Joi.string().required(),
-        JWT_ALGORITHM: Joi.string().required(),
-        NEO4J_URL: Joi.string().required(),
+        JWT_ISSUER: Joi.string().optional(),
+        JWT_AUDIENCE: Joi.string().optional(),
+        JWT_ALGORITHM: Joi.string().optional(),
+
+        NEO4J_HOST: Joi.string().required(),
+        NEO4J_PORT: Joi.number().required(),
         NEO4J_USER: Joi.string().required(),
-        NEO4J_PASSWORD: Joi.string().required()
+        NEO4J_PASSWORD: Joi.string().required(),
+
+        GOTENBERG_HOST: Joi.string().optional(),
+        GOTENBERG_PORT: Joi.string().optional(),
+
+        MAX_NODE_DATA_LENGTH: Joi.number().optional(),
+
+        GIGACHAT_EMBEDDING_MODEL: Joi.string().optional(),
       })
     }),
     TypeOrmModule.forRootAsync({
@@ -44,13 +65,19 @@ import { SharedModule } from './shared/shared.module'
           entities: [__dirname + 'db/postgres/entities/*.entity.{ts,js}'],
           synchronize: false,
           migrations: [__dirname + 'db/postgres/migrations/**/*{.ts,.js}'],
-          migrationsRun: true
+          migrationsRun: true,
+          
         }
       }
     }),
     ChatModule,
     AuthModule,
-    SharedModule
+    SharedModule,
+    AgentModule,
+    GigaChatModule,
+    EmbeddingModule,
+    Neo4jModule,
+    
   ],
 })
 export class AppModule {}

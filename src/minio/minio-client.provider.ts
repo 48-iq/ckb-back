@@ -8,10 +8,10 @@ export const MinioClientProvider: Provider = {
   provide: MINIO_CLIENT,
   inject: [ConfigService],
   useFactory: async (configService: ConfigService) => {
-    const endPoint = configService.getOrThrow<string>('MINIO_ENDPOINT')!;
-    const port = +configService.getOrThrow<string>('MINIO_PORT')!;
-    const accessKey = configService.getOrThrow<string>('MINIO_ACCESS_KEY')!;
-    const secretKey = configService.getOrThrow<string>('MINIO_SECRET_KEY')!;
+    const endPoint = configService.getOrThrow<string>('MINIO_HOST');
+    const port = +configService.getOrThrow<string>('MINIO_PORT');
+    const accessKey = configService.getOrThrow<string>('MINIO_USER');
+    const secretKey = configService.getOrThrow<string>('MINIO_PASSWORD');
     return new Minio.Client({ endPoint, port, accessKey, secretKey });
   }
 }

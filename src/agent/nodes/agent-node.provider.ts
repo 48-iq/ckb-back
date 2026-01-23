@@ -2,7 +2,7 @@ import { Provider } from "@nestjs/common";
 import { State } from "../agent.state";
 import GigaChat from "gigachat";
 import { GIGACHAT } from "src/gigachat/gigachat.provider";
-import { FunctionsService } from "../functions.service";
+import { FunctionsService } from "../services/functions.service";
 
 export const AGENT_NODE = 'AGENT_NODE'
 

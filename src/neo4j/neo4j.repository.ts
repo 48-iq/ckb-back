@@ -1,7 +1,7 @@
 import { Injectable, OnApplicationBootstrap, OnApplicationShutdown } from "@nestjs/common";
 import { Driver, int, Integer, Transaction } from "neo4j-driver";
 import { NodeType } from "./node-type.type";
-import { NewDocument } from "./new-document.interface";
+import { Neo4jDocument } from "./neo4j-document.interface";
 import { SavedDocument } from "./saved-document.interface";
 import { Node } from "./node.entity";
 import { NodeNotFoundError } from "./node-not-found.error";
@@ -97,7 +97,7 @@ export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBoot
     }})[0];
   }
 
-  async saveDocument(newDocument: NewDocument): Promise<SavedDocument> {
+  async saveDocument(newDocument: Neo4jDocument): Promise<SavedDocument> {
     const session = this.driver.session();
     try {
       const tx = await session.beginTransaction();

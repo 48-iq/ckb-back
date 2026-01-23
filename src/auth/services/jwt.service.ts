@@ -52,8 +52,5 @@ export class JwtService {
   async verifyAndRetrieveUserId(jwt: string) {
     const { userId } = await this.verifyToken(jwt);
     return userId;
-  }
-
-
-  
+  } 
 }

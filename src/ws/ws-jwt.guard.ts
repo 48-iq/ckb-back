@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { Socket } from 'socket.io';
 import { AppError } from 'src/shared/errors/app.error';
-import { JwtService } from 'src/auth/jwt.service';
+import { JwtService } from 'src/auth/services/jwt.service';
 
 @Injectable()
 export class WsJwtGuard implements CanActivate {

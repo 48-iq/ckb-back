@@ -1,11 +1,11 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { AGENT_NODE } from "./nodes/agent-node.provider";
-import { DOCUMENT_NODE } from "./nodes/document-node.provider";
+import { AGENT_NODE } from "../nodes/agent-node.provider";
+import { DOCUMENT_NODE } from "../nodes/document-node.provider";
 import { StateGraph, START, END, CompiledStateGraph, StateType, CompiledGraph } from "@langchain/langgraph";
-import { State } from "./agent.state";
-import { PLAN_NODE } from "./nodes/plan-node.provider";
-import { RESULT_NODE } from "./nodes/result-node.provider";
-import { FUNCTIONS_NODE } from "./nodes/functions-node";
+import { State } from "../agent.state";
+import { PLAN_NODE } from "../nodes/plan-node.provider";
+import { RESULT_NODE } from "../nodes/result-node.provider";
+import { FUNCTIONS_NODE } from "../nodes/functions-node";
 import { MessageDto } from "src/chat/dto/message.dto";
 import { Message } from "gigachat/interfaces";
 
@@ -46,7 +46,8 @@ export class AgentService {
       .addEdge("planNode", "agentNode")
       .addConditionalEdges("agentNode", this.shouldContinueEdge, ["functionsNode", "resultNode"])
       .addEdge("resultNode", "documentNode")
-      .addEdge(documentNode, END).compile();
+      .addEdge("documentNode", END)
+      .compile();
   }
 
   private createState(args: {
