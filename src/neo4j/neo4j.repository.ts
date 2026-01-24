@@ -1,7 +1,7 @@
 import { Injectable, OnApplicationBootstrap, OnApplicationShutdown } from "@nestjs/common";
 import { Driver, int, Integer, Transaction } from "neo4j-driver";
 import { NodeType } from "./node-type.type";
-import { Neo4jDocument } from "./neo4j-document.interface";
+import { Neo4jDocument } from "./entities/neo4j-document.entity";
 import { SavedDocument } from "./saved-document.interface";
 import { Node } from "./node.entity";
 import { NodeNotFoundError } from "./node-not-found.error";

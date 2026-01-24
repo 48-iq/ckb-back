@@ -13,7 +13,7 @@ export class MessagesTable1766060519273 implements MigrationInterface {
         "chatId" uuid,
         CONSTRAINT "PK_message_id" PRIMARY KEY ("id"),
         CONSTRAINT "FK_message_chat" FOREIGN KEY ("chatId")
-          REFERENCES "chat"("id")
+          REFERENCES "chats"("id")
           ON DELETE CASCADE
       );
 

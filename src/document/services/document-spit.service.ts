@@ -1,27 +1,17 @@
 import { Injectable } from '@nestjs/common';
-const pdfjsLib = require('pdfjs-dist/legacy/build/pdf');
-
-(pdfjsLib as any).GlobalWorkerOptions.workerSrc = null;
-
+import { PDFParse } from 'pdf-parse';
 @Injectable()
 export class DocumentSplitService {
   async splitToPages(pdfBuffer: Buffer): Promise<string[]> {
-    const loadingTask = pdfjsLib.getDocument({ data: pdfBuffer });
-    const pdf = await loadingTask.promise;
-
-    const pages: string[] = [];
-
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-
-      const text = content.items
-        .map((item: any) => item.str)
-        .join(' ');
-
-      pages.push(text.trim());
-    }
-
-    return pages;
+    const parser = new PDFParse({ data: pdfBuffer });
+    const text = await parser.getText();
+    const textPages = text.pages.map(page => page.text);
+    const result: string[] = []
+    for (let i = 0; i < textPages.length; i++) {
+      if (textPages[i].trim().length > 0) {
+        result.push(textPages[i]);
+      }
+    } 
+    return result;
   }
 }

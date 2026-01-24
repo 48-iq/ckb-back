@@ -63,9 +63,9 @@ import { DocumentModule } from './document/document.module'
           username: config.get<string>('POSTGRES_USER')!,
           password: config.get<string>('POSTGRES_PASSWORD')!,
           database: config.get<string>('POSTGRES_DB')!,
-          entities: [__dirname + 'db/postgres/entities/*.entity.{ts,js}'],
+          entities: [__dirname + '/postgres/entities/*.entity.{ts,js}'],
           synchronize: false,
-          migrations: [__dirname + 'db/postgres/migrations/**/*{.ts,.js}'],
+          migrations: [__dirname + '/postgres/migrations/**/*{.ts,.js}'],
           migrationsRun: true,
           
         }

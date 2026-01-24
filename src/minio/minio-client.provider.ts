@@ -12,6 +12,6 @@ export const MinioClientProvider: Provider = {
     const port = +configService.getOrThrow<string>('MINIO_PORT');
     const accessKey = configService.getOrThrow<string>('MINIO_USER');
     const secretKey = configService.getOrThrow<string>('MINIO_PASSWORD');
-    return new Minio.Client({ endPoint, port, accessKey, secretKey });
+    return new Minio.Client({ endPoint, port, accessKey, secretKey, useSSL: false });
   }
 }

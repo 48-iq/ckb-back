@@ -8,7 +8,6 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
   app.useWebSocketAdapter(new SocketIoAdapter(configService));
-  console.log("app created")
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

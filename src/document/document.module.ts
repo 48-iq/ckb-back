@@ -11,6 +11,7 @@ import { MinioModule } from "src/minio/minio.module";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { Contract } from "src/postgres/entities/contract.entity";
 import { Document } from "src/postgres/entities/document.entity";
+import { DocumentEmbedService } from "./services/document-embed.service";
 
 
 
@@ -26,7 +27,8 @@ import { Document } from "src/postgres/entities/document.entity";
     DocumentService, 
     DocumentSplitService, 
     DocumentProcessService, 
-    DocumentConvertService
+    DocumentConvertService,
+    DocumentEmbedService
   ],
   exports: [DocumentMapper],
   controllers: [DocumentController]

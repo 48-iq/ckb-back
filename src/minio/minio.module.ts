@@ -1,10 +1,11 @@
 import { Global, Module } from "@nestjs/common";
-import { MINIO_CLIENT, MinioClientProvider } from "./minio-client.provider";
+import { MinioClientProvider } from "./minio-client.provider";
+import { MinioRepository } from "./minio.repository";
 
 
 @Global()
 @Module({
-  exports: [MINIO_CLIENT],
-  providers: [MinioClientProvider]
+  providers: [MinioClientProvider, MinioRepository],
+  exports: [MinioRepository],
 })
 export class MinioModule {}

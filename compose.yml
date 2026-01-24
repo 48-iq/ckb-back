@@ -4,7 +4,7 @@ services:
   app:
     build: .
     ports:
-      - 0000:3000
+      - 80:3000
     environment:
       - GIGACHAT_API_KEY=${GIGACHAT_API_KEY}
       - JWT_SECRET=${JWT_SECRET}
@@ -80,7 +80,6 @@ services:
 
   gotenberg:
     image: gotenberg/gotenberg:8
-    container_name: gotenberg
     ports:
       - "0000:3000"
     command:
@@ -88,6 +87,8 @@ services:
       - "--api-port=3000"
       - "--log-level=info"
     restart: unless-stopped
+    networks:
+      net_back: 
 
 
 networks:

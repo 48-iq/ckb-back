@@ -1,15 +1,20 @@
-import { Injectable } from "@nestjs/common";
-import { ProcessedPage } from "../processed-page.interface";
+import { Injectable, Logger } from "@nestjs/common";
+import { ProcessedPage } from "../entities/processed-page.entity";
 import { InjectGigachat } from "src/gigachat/gigachat.decorator";
 import GigaChat from "gigachat";
 import z from "zod";
 import { ConfigService } from "@nestjs/config";
 import { AppError } from "src/shared/errors/app.error";
-import { Neo4jDocument } from "src/neo4j/neo4j-document.interface";
 import { EmbeddingService } from "src/embedding/embedding.service";
+import { Neo4jEntity } from "src/neo4j/entities/neo4j-entity.entity";
+import { ProcessedDocument } from "../entities/processed-document.entity";
+import { Message } from "gigachat/interfaces";
+
 
 @Injectable()
 export class DocumentProcessService {
+
+  private readonly logger = new Logger(DocumentProcessService.name);
 
   private readonly schema = z.object({
     name: z.string(),
@@ -40,88 +45,108 @@ export class DocumentProcessService {
     contract: {
       name: string
     },
-    postgersId: string,
+    postgresId: string,
     name: string,
     pages: string[]
-  }): Promise<Neo4jDocument> {
-    const { contract, name, pages, postgersId } = args;
+  }): Promise<ProcessedDocument> {
+    const { contract, name, pages, postgresId } = args;
 
-    const processedPages = await Promise.all(pages.map(page => this.processPage(page)));
-
-    const embeddedPages = await Promise.all(processedPages.map(async (page) => {
-      const embeddedParagraphs = await Promise.all(page.paragraphs.map(async (paragraph) => {
-        const embeddedFacts = await Promise.all(paragraph.facts.map(async (fact) => {
-          const embeddedEntities = await Promise.all(fact.entities.map(async (entity) => {
-            const entityNameEmbedding = await this.embeddingService.getEmbedding(entity.name);
-            return {
-              name: entity.name,
-              nameEmbedding: entityNameEmbedding
-            };
-          }));
-          const factTextEmbedding = await this.embeddingService.getEmbedding(fact.text);
-          return {
-            text: fact.text,
-            textEmbedding: factTextEmbedding,
-            name: fact.name,
-            entities: embeddedEntities
-          };
-        }))
-        const paragraphTextEmbedding = await this.embeddingService.getEmbedding(paragraph.text);
-        return {
-          text: paragraph.text,
-          textEmbedding: paragraphTextEmbedding,
-          name: paragraph.name,
-          facts: embeddedFacts
-        };
-      })) 
-      const pageTextEmbedding = await this.embeddingService.getEmbedding(page.text);
-      return {
-        text: page.text,
-        textEmbedding: pageTextEmbedding,
-        name: page.name,
-        paragraphs: embeddedParagraphs
-      };
-    }));
-
-    const contractNameEmbedding = await this.embeddingService.getEmbedding(contract.name)
-
-    const documentNameEmbedding = await this.embeddingService.getEmbedding(name);
-
+    const processedPages: ProcessedPage[] = [];
+    for (let i = 0; i < pages.length; i++) {
+      const processedPage = await this.processPage(pages[i]);
+      processedPages.push(processedPage);
+    }
     return {
-      contract: {
-        name: contract.name,
-        nameEmbedding: contractNameEmbedding
-      },
+      contract,
       name,
-      nameEmbedding: documentNameEmbedding,
-      postgresId: postgersId,
-      pages: embeddedPages
+      postgresId,
+      pages: processedPages
+    }
+  }
+  private async embedEntity(entity: {name: string}): Promise<Neo4jEntity> {
+    const nameEmbedding = await this.embeddingService.getEmbedding(entity.name);
+    return {
+      name: entity.name,
+      nameEmbedding
     }
   }
 
+  private async embedFact(fact: {
+    name: string;
+    text: string;
+    entities: {
+      name: string;
+    }[];
+  }) {
+    const textEmbedding = await this.embeddingService.getEmbedding(fact.text);
+    const entities: Neo4jEntity[] = [];
+    for (let i = 0; i < fact.entities.length; i++) {
+      const entity = await this.embedEntity(fact.entities[i]);
+      entities.push(entity);
+    }
+    return {
+      name: fact.name,
+      text: fact.text,
+      textEmbedding,
+      entities
+    };
+  }
   private async processPage(page: string): Promise<ProcessedPage> {
+    this.logger.log(`Processing page: ${page}`);
+
+    const messages: Message[] = [
+      {role: "system", content: SYSTEM_PROMPT},
+      {role: "user", content: page}
+    ]
     for (let i = 0; i < this.maxParseRetry; i++) {
       try {
         const response = await this.gigachat.chat({
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: page }
-          ],
+          messages: messages,
           temperature: 0
         });
-        const content = response.choices[0].message.content;
+        const message = response.choices[0].message;
+        messages.push(message);
+        const content = message.content;
+        this.logger.log(`Processed result: ${content}`);
         const result = this.schema.parse(JSON.parse(content??''));
         return {
           ...result,
           text: page
         };
       } catch (e) {
+        this.logger.error(e);
+        this.logger.log(`Retrying...`);
+        messages.push({role: "user", content: RETRY_PROMPT});
         continue;
       }
     }
     throw new AppError("DOCUMENT_PARSE_ERROR");
   }
 }
+
+const RETRY_PROMPT = `
+###
+Ты прислал ответ в неправильном формате, 
+повтори ответ в правильном формате, не давай никаких комментариев, 
+только ответ в правильном формате, если страница пустая или в ней мало информации,
+то разбей эту информацию на 1 или несколько параграфов.
+Формат ответа JSON:
+{
+  "name": string, // название страницы
+  "paragraphs": { // массив абзацев
+    "text": string, // текст абзаца
+    "name": string, // название абзаца
+    "facts": { // массив фактов
+      "text": string, // текст факта
+      "name": string, // название факта
+      "entities": { // массив сущностей
+        "name": string // название сущности
+      }[],
+    }[],
+  }[] 
+}
+ЧЕТКО СЛЕДУЙ ЗАДАННОМУ ФОРМАТУ, ВСЕ КЛЮЧИ JSON ОТВЕТА НЕОБХОДИМЫ!!!
+`
 
 const SYSTEM_PROMPT = `
 ###
@@ -159,11 +184,13 @@ const SYSTEM_PROMPT = `
     }[],
   }[] 
 }
-
+ЧЕТКО СЛЕДУЙ ЗАДАННОМУ ФОРМАТУ, ВСЕ КЛЮЧИ JSON ОТВЕТА НЕОБХОДИМЫ!!!
 Требования:
 ###
-Не выдумывай новую информацию, используй только информацию из документа. 
+Не выдумывай новую информацию, используй только информацию из документа.
+
 Убедись, что ты выписал все сущности из каждого факта (существительные, глаголы, прилагательные).
+
 Старайся заменять местоимения на их конкретные существительные эквиваленты, (например "я, он, она" на фактическое имя).
 Убедись, что все найденные сущности находятся в соответствующих фактах.
 Ответ присылай строго в указанном формате.
