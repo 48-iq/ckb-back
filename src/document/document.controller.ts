@@ -12,7 +12,6 @@ export class DocumentController {
     private readonly documentService: DocumentService
   ) {}
 
-  @Public()
   @Post()
   @UseInterceptors(FileInterceptor('file'))
   async saveDocument(

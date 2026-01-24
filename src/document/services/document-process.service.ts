@@ -51,11 +51,21 @@ export class DocumentProcessService {
   }): Promise<ProcessedDocument> {
     const { contract, name, pages, postgresId } = args;
 
-    const processedPages: ProcessedPage[] = [];
-    for (let i = 0; i < pages.length; i++) {
-      const processedPage = await this.processPage(pages[i]);
-      processedPages.push(processedPage);
+    const count = pages.length;
+
+    const processedPagesPromises: Promise<ProcessedPage>[] = [];
+    for (let i = 0; i < count; i++) {
+      const page1 = pages[i];
+      const page2 = pages.at(i + 1);
+      this.logger.log(`Processing page: ${i + 1} / ${pages.length}`);
+      await this.delay(1000);
+      if (!page2) {
+        processedPagesPromises.push(this.processPage(page1));
+      } else {
+        processedPagesPromises.push(this.processPage(page1, page2));
+      }
     }
+    const processedPages = await Promise.all(processedPagesPromises);
     return {
       contract,
       name,
@@ -63,40 +73,21 @@ export class DocumentProcessService {
       pages: processedPages
     }
   }
-  private async embedEntity(entity: {name: string}): Promise<Neo4jEntity> {
-    const nameEmbedding = await this.embeddingService.getEmbedding(entity.name);
-    return {
-      name: entity.name,
-      nameEmbedding
-    }
+
+  delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  private async embedFact(fact: {
-    name: string;
-    text: string;
-    entities: {
-      name: string;
-    }[];
-  }) {
-    const textEmbedding = await this.embeddingService.getEmbedding(fact.text);
-    const entities: Neo4jEntity[] = [];
-    for (let i = 0; i < fact.entities.length; i++) {
-      const entity = await this.embedEntity(fact.entities[i]);
-      entities.push(entity);
-    }
-    return {
-      name: fact.name,
-      text: fact.text,
-      textEmbedding,
-      entities
-    };
-  }
-  private async processPage(page: string): Promise<ProcessedPage> {
-    this.logger.log(`Processing page: ${page}`);
+  private async processPage(page1: string, page2?: string): Promise<ProcessedPage> {
 
     const messages: Message[] = [
       {role: "system", content: SYSTEM_PROMPT},
-      {role: "user", content: page}
+      {
+        role: "user", 
+        content: `=====PAGE 1=====\n` + 
+          `${page1}` + 
+          `${page2?"\n=====PAGE 2=====\n":""}`  +
+          `${page2?page2:""}`}
     ]
     for (let i = 0; i < this.maxParseRetry; i++) {
       try {
@@ -107,15 +98,13 @@ export class DocumentProcessService {
         const message = response.choices[0].message;
         messages.push(message);
         const content = message.content;
-        this.logger.log(`Processed result: ${content}`);
         const result = this.schema.parse(JSON.parse(content??''));
+        this.logger.log(`Page parsed`);
         return {
           ...result,
-          text: page
+          text: page1
         };
       } catch (e) {
-        this.logger.error(e);
-        this.logger.log(`Retrying...`);
         messages.push({role: "user", content: RETRY_PROMPT});
         continue;
       }
@@ -154,7 +143,8 @@ const SYSTEM_PROMPT = `
 хорошо понимающий проектную, техническую, нормативную и исполнительную документацию.
 
 Твоя задача - разбиение страницы документа на абзацы, выделение фактов из каждого абзаца и выделение сущностей из фактов.
-
+Тебе могут быть даны 2 страницы документа, ты должен обработать только первую, если последний абзац первой страницы не закончен,
+то его следует объединить с первым абзацем второй страницы.
 ###
 Для СТРАНИЦЫ, АБЗАЦЕВ и ФАКТОВ необходимо выдумать названия, кратко описывающие их содержание.
 
@@ -166,7 +156,7 @@ const SYSTEM_PROMPT = `
 причинно-следственные связи, последовательности событий, временные шкалы.
 
 Сущности - основные существительные (имена собственные, время, события, места, числа, адреса, должности, объекты выполняющие действие), 
-глаголы (действия), прилагательные (состояние, характер действия), которые играют ключевую роль в фактах.
+глаголы (действия), прилагательные (состояние, характер действия), которые играют ключевую роль в фактах, СУЩНОСТИ ЕСТЬ В КАЖДОМ ФАКТЕ!!!.
 
 ###
 Формат ответа JSON:
@@ -191,7 +181,7 @@ const SYSTEM_PROMPT = `
 
 Убедись, что ты выписал все сущности из каждого факта (существительные, глаголы, прилагательные).
 
-Старайся заменять местоимения на их конкретные существительные эквиваленты, (например "я, он, она" на фактическое имя).
+Старайся заменять местоимения и сокращения на их конкретные существительные эквиваленты, (например "я, он, она" на фактическое имя).
 Убедись, что все найденные сущности находятся в соответствующих фактах.
 Ответ присылай строго в указанном формате.
 `

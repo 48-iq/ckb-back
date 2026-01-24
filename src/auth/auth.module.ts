@@ -6,6 +6,7 @@ import { AuthGuard } from "./auth.guard";
 import { UserService } from "./services/user.service";
 import { User } from "src/postgres/entities/user.entity";
 import { TypeOrmModule } from "@nestjs/typeorm";
+import { UsersInitService } from "./services/users-init.service";
 
 
 @Module({
@@ -14,6 +15,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
     AuthService, 
     JwtService, 
     UserService,
+    UsersInitService,
     { provide: 'AUTH_GUARD', useClass: AuthGuard }
   ],
   exports: [
