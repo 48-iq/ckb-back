@@ -28,6 +28,7 @@ import { DocumentModule } from './document/document.module'
         GIGACHAT_MODEL: Joi.string().optional(),
         GIGACHAT_SCOPE: Joi.string().optional(),
         GIGACHAT_TIMEOUT: Joi.number().optional(),
+        GIGACHAT_EMBEDDING_MODEL: Joi.string().required(),
 
         MINIO_USER: Joi.string().required(),
         MINIO_PASSWORD: Joi.string().required(),
@@ -35,21 +36,21 @@ import { DocumentModule } from './document/document.module'
         MINIO_PORT: Joi.number().required(),
 
         JWT_SECRET: Joi.string().required(),
-        JWT_ISSUER: Joi.string().optional(),
-        JWT_AUDIENCE: Joi.string().optional(),
-        JWT_ALGORITHM: Joi.string().optional(),
+        JWT_ISSUER: Joi.string().required(),
+        JWT_AUDIENCE: Joi.string().required(),
+        JWT_ALGORITHM: Joi.string().required(),
 
         NEO4J_HOST: Joi.string().required(),
         NEO4J_PORT: Joi.number().required(),
         NEO4J_USER: Joi.string().required(),
         NEO4J_PASSWORD: Joi.string().required(),
 
-        GOTENBERG_HOST: Joi.string().optional(),
-        GOTENBERG_PORT: Joi.string().optional(),
+        GOTENBERG_HOST: Joi.string().required(),
+        GOTENBERG_PORT: Joi.string().required(),
 
-        MAX_NODE_DATA_LENGTH: Joi.number().optional(),
+        MAX_NODE_DATA_LENGTH: Joi.number().required(),
 
-        GIGACHAT_EMBEDDING_MODEL: Joi.string().optional(),
+        APP_USERS: Joi.string().required()
       })
     }),
     TypeOrmModule.forRootAsync({

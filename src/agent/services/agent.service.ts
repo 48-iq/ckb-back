@@ -21,8 +21,9 @@ export class AgentService {
   private readonly abortMap = new Map<string, AbortController>();
 
   private shouldContinueEdge = (state: typeof State.State) => {
-    const { messages } = state;
+    const { messages, maxSteps, totalSteps} = state;
     const lastMessage = messages.at(-1);
+    if (maxSteps <= totalSteps) return "resultNode";
     if (lastMessage === undefined) return "resultNode";
     if (lastMessage.function_call !== undefined) return "functionsNode";
     return "resultNode";

@@ -7,8 +7,9 @@ const State = Annotation.Root({
   result: Annotation<string>,
   plan: Annotation<string>,
   documents: Annotation<{ id: number }[]>,
-  maxTokens: Annotation<number>,
-  totalTokens: Annotation<number>
+  maxSteps: Annotation<number>,
+  totalTokens: Annotation<number>,
+  totalSteps: Annotation<number>,
 });
 
 

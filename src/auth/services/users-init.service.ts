@@ -17,9 +17,9 @@ export class UsersInitService implements OnApplicationBootstrap{
 
   async onApplicationBootstrap() {
     const usersString = this.configService.getOrThrow<string>('APP_USERS');
-    const splitedUsersStrings = usersString.split('|');
-    if (splitedUsersStrings.length === 0) throw new Error('APP_USERS is empty');
-    for (const userString of splitedUsersStrings) {
+    const splittedUsersStrings = usersString.split('|');
+    if (splittedUsersStrings.length === 0) throw new Error('APP_USERS is empty');
+    for (const userString of splittedUsersStrings) {
       const [username, password] = userString.split(':');
       if (!username || !password) throw new Error('APP_USERS is invalid');
       const user = await this.userRepository.findOneBy({ username });

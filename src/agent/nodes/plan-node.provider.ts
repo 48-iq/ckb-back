@@ -11,9 +11,10 @@ export const PlanNodeProvider: Provider = {
   inject: [GIGACHAT],
   useFactory: async (model: GigaChat) => {
     return async (state: typeof State.State) => {
-      const { messages } = state;
+      const { messages, totalTokens} = state;
       const response = await model.chat({ messages, temperature: 0 });
-      return { plan: response.choices[0].message.content };
+      const newTotalTokens = response.usage.total_tokens + totalTokens;
+      return { plan: response.choices[0].message.content, totalTokens: newTotalTokens };
     }
   },
 }

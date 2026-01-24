@@ -14,8 +14,7 @@ export const ResultNodeProvider: Provider = {
   useFactory: (model: GigaChat) => {
     return async (state: typeof State.State, config: LangGraphRunnableConfig) => {
       
-      const { messages } = state;
-
+      const { messages, totalTokens } = state;
       let text = '';
       for await (const chunk of model.stream({
         messages: [
@@ -34,8 +33,17 @@ export const ResultNodeProvider: Provider = {
           } });
         }
       }
-      
-      return { result: text };
+      const tokensResp = await model.tokensCount([
+        SYSTEM_PROMPT, 
+        ...(messages.map((message) => message.content??'')),
+        text
+      ]);
+      let resultTokens = 0;
+      for (const token of tokensResp.tokens) {
+        resultTokens += token.tokens;
+      }
+      const newTotalTokens = totalTokens + resultTokens;
+      return { result: text,  totalTokens: newTotalTokens };
     }
   }
 }

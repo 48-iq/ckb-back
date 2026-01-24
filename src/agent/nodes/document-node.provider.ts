@@ -15,11 +15,12 @@ export const DocumentNodeProvider: Provider = {
   provide: DOCUMENT_NODE,
   inject: [GIGACHAT, ConfigService],
   useFactory: async (model: GigaChat, configService: ConfigService) => {
-
-    const maxParseRetry = +(configService.get<string>('MAX_PARSE_RETRY') || '5');
-
+    
+    const maxParseRetry = +configService.getOrThrow<string>('MAX_PARSE_RETRY');
+    
     return async (state: typeof State.State) => {
-      const { messages, result } = state;
+      const { messages, result, totalTokens } = state;
+      let newTotalTokens = totalTokens;
       const tryAnswer = async () => {
         const response = await model.chat({
           messages: [
@@ -29,18 +30,19 @@ export const DocumentNodeProvider: Provider = {
           ],
           temperature: 0
         })
+        newTotalTokens = response.usage.total_tokens + newTotalTokens;
         return response.choices[0].message.content;
       }
       for (let i = 0; i < maxParseRetry; i++) {
         const answer = await tryAnswer()??'';
         try {
           const parsed = documentResultSchema.parse(JSON.parse(answer));
-          return { documents: parsed.documents };
+          return { documents: parsed.documents, totalTokens: newTotalTokens };
         } catch (e) {
           continue;
         }
       }
-      return { documents: [] };
+      return { documents: [], totalTokens: newTotalTokens };
     }
   }
 }

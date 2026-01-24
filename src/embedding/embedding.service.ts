@@ -13,7 +13,7 @@ export class EmbeddingService {
     @InjectGigachat() private readonly gigachat: GigaChat,
     private readonly ConfigService: ConfigService,
   ){
-    this.model = this.ConfigService.get<string>('GIGACHAT_EMBEDDING_MODEL') || 'EmbeddingsGigaR';
+    this.model = this.ConfigService.getOrThrow<string>('GIGACHAT_EMBEDDING_MODEL');
   }
 
   async getEmbedding(text: string) {

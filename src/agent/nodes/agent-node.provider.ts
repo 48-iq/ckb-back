@@ -15,7 +15,7 @@ export const AgentNodeProvider: Provider = {
   ) => {
     return async (state: typeof State.State) => {
       
-      const { plan, messages } = state;
+      const { plan, messages, totalTokens, totalSteps} = state;
 
       const response = await model.chat({
         temperature: 0,
@@ -26,10 +26,13 @@ export const AgentNodeProvider: Provider = {
         ],
         function_call: "auto",
         functions: functionsService.getFunctions()
-        
       });
 
-      return { messages: [...messages, response] };
+      const newTotalTokens = response.usage.total_tokens + totalTokens;
+      const newTotalSteps = totalSteps + 1;
+      
+
+      return { messages: [...messages, response], totalTokens: newTotalTokens, totalSteps: newTotalSteps };
     }
   }
 }
