@@ -4,7 +4,7 @@ import { AuthService } from "./services/auth.service";
 import { JwtDto } from "./dto/jwt.dto";
 import { Public } from "./public.decorator";
 
-@Controller("/api")
+@Controller("/api/auth")
 export class AuthController {
 
   constructor(
