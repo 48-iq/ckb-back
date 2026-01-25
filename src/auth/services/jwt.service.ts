@@ -39,7 +39,8 @@ export class JwtService {
   private async verifyToken(token: string) {
     const { payload } = await jose.jwtVerify<JwtPayload>(token, this.secret, {
       issuer: this.issuer,
-      audience: this.audience
+      audience: this.audience,
+      algorithms: [this.algorithm],
     });
 
     return payload;
