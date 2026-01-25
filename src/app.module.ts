@@ -10,6 +10,7 @@ import { GigaChatModule } from './gigachat/gigachat.module'
 import { EmbeddingModule } from './embedding/embedding.module'
 import { Neo4jModule } from './neo4j/neo4j.module'
 import { DocumentModule } from './document/document.module'
+import { WsModule } from './ws/ws.module'
 
 @Module({
   imports: [
@@ -79,8 +80,8 @@ import { DocumentModule } from './document/document.module'
     GigaChatModule,
     EmbeddingModule,
     Neo4jModule,
-    DocumentModule
-    
+    DocumentModule,
+    WsModule
   ],
 })
 export class AppModule {}
