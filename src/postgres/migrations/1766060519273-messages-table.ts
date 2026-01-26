@@ -8,7 +8,7 @@ export class MessagesTable1766060519273 implements MigrationInterface {
       CREATE TABLE "messages" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
         "role" character varying NOT NULL,
-        "createdAt" TIMESTAMP NOT NULL,
+        "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         "text" text NOT NULL,
         "chatId" uuid,
         CONSTRAINT "PK_message_id" PRIMARY KEY ("id"),

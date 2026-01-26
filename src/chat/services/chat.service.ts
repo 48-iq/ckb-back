@@ -66,6 +66,7 @@ export class ChatService {
       chat = new Chat();
       chat.user = user;
       chat.title = "Новый чат";
+      chat.isPending = false;
       chat.isNew = true;
       chat = await this.chatRepository.save(chat);
     }

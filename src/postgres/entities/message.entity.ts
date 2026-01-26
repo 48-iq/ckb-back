@@ -21,7 +21,7 @@ export class Message {
   @Column()
   role: MessageRole;
 
-  @CreateDateColumn()
+  @CreateDateColumn({type: 'timestamp', default: () => "CURRENT_TIMESTAMP(6)"})
   createdAt: Date;
 
   @Column()

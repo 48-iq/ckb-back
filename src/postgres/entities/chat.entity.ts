@@ -26,7 +26,7 @@ export class Chat {
   @Column()
   isPending: boolean;
 
-  @CreateDateColumn()
+  @CreateDateColumn({type: 'timestamp', default: () => "CURRENT_TIMESTAMP(6)"})
   createdAt: Date;
 
   @ManyToOne(() => User, user => user.chats)

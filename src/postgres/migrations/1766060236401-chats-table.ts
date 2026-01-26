@@ -8,7 +8,7 @@ export default class ChatsTable1766060236401 implements MigrationInterface {
       CREATE TABLE "chats" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
         "title" character varying NOT NULL,
-        "createdAt" TIMESTAMP NOT NULL,
+        "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         "isNew" boolean NOT NULL,
         "isPending" boolean NOT NULL,
         "userId" uuid,
