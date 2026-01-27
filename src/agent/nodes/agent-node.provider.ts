@@ -28,11 +28,15 @@ export const AgentNodeProvider: Provider = {
         functions: functionsService.getFunctions()
       });
 
+      const message = response.choices.at(0)?.message??{
+        role: "assistant", content: ""
+      }
+
       const newTotalTokens = response.usage.total_tokens + totalTokens;
       const newTotalSteps = totalSteps + 1;
       
 
-      return { messages: [...messages, response], totalTokens: newTotalTokens, totalSteps: newTotalSteps };
+      return { messages: [...messages, message], totalTokens: newTotalTokens, totalSteps: newTotalSteps };
     }
   }
 }

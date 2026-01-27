@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { AGENT_NODE } from "../nodes/agent-node.provider";
 import { DOCUMENT_NODE } from "../nodes/document-node.provider";
 import { StateGraph, START, END, CompiledStateGraph, StateType, CompiledGraph } from "@langchain/langgraph";
@@ -12,6 +12,8 @@ import { Message } from "gigachat/interfaces";
 @Injectable()
 export class AgentService {
 
+  private readonly logger = new Logger(AgentService.name);
+
   agent: CompiledStateGraph<
     typeof State.State,
     Partial<typeof State.State>,
@@ -23,9 +25,12 @@ export class AgentService {
   private shouldContinueEdge = (state: typeof State.State) => {
     const { messages, maxSteps, totalSteps} = state;
     const lastMessage = messages.at(-1);
+    this.logger.log(`last message: ${JSON.stringify(lastMessage)}`);
+    this.logger.log(`total steps: ${totalSteps}, max steps: ${maxSteps}, maxSteps <= totalSteps: ${maxSteps <= totalSteps}`);
+    this.logger.log(`last message function_call: ${lastMessage?.function_call}`);
     if (maxSteps <= totalSteps) return "resultNode";
     if (lastMessage === undefined) return "resultNode";
-    if (lastMessage.function_call !== undefined) return "functionsNode";
+    if (lastMessage.function_call) return "functionsNode";
     return "resultNode";
   }
 
@@ -46,6 +51,7 @@ export class AgentService {
       .addEdge(START, "planNode")
       .addEdge("planNode", "agentNode")
       .addConditionalEdges("agentNode", this.shouldContinueEdge, ["functionsNode", "resultNode"])
+      .addEdge("functionsNode", "agentNode")
       .addEdge("resultNode", "documentNode")
       .addEdge("documentNode", END)
       .compile();

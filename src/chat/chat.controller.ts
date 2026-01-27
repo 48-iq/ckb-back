@@ -29,7 +29,7 @@ export class ChatController {
     @Query("chatId") chatId: string
   ) {
     const userId = req["userId"];
-    return await this.chatService.getChatMessages({ userId, before, limit, chatId });
+    return await this.chatService.getChatMessagesCursor({ userId, before, limit, chatId });
   }
 
   @Get("/new")

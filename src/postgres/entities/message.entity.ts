@@ -28,9 +28,13 @@ export class Message {
   text: string;
 
   @ManyToOne(() => Chat, chat => chat.messages )
-  @JoinTable()
   chat: Chat;
-
+  
   @ManyToMany(() => Document, (document) => document.messages, { eager: true, cascade: ["insert", "update"] })
+  @JoinTable({ 
+    name: "messages_documents", 
+    joinColumn: { name: "messageId" }, 
+    inverseJoinColumn: { name: "documentId" } 
+  })
   documents: Document[];
 }

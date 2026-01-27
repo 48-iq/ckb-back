@@ -1,13 +1,14 @@
-import { Provider } from "@nestjs/common";
+import { Logger, Provider } from "@nestjs/common";
 import { State } from "../agent.state";
 import { LangGraphRunnableConfig } from "@langchain/langgraph";
 import { GIGACHAT } from "src/gigachat/gigachat.provider";
 import GigaChat from "gigachat";
+import { ResultCustomChunk } from "src/chat/chunks/result.custom.chunk";
 
 
 
 export const RESULT_NODE = 'RESULT_NODE';
-
+const logger = new Logger("ResultNodeProvider");
 export const ResultNodeProvider: Provider = {
   provide: RESULT_NODE,
   inject: [GIGACHAT],
@@ -16,7 +17,7 @@ export const ResultNodeProvider: Provider = {
       
       const { messages, totalTokens } = state;
       let text = '';
-      for await (const chunk of model.stream({
+      for await (let chunk of model.stream({
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           ...messages,
@@ -24,15 +25,13 @@ export const ResultNodeProvider: Provider = {
         temperature: 0,
       })) {
         if (config.signal?.aborted) return;
-        const updateText = chunk.choices[0]?.delta.content||'';
-        text += updateText;
+        const textUpdate = chunk.choices[0]?.delta.content||'';
+        text += textUpdate;
         if (config.writer) {
-          config.writer({ type: "result", data: {
-            updateText,
-            text
-          } });
+          config.writer(new ResultCustomChunk({ type: 'result', text, textUpdate }));
         }
       }
+      logger.log('after result');
       const tokensResp = await model.tokensCount([
         SYSTEM_PROMPT, 
         ...(messages.map((message) => message.content??'')),

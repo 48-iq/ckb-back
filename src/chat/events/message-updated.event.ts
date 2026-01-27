@@ -4,7 +4,7 @@ export class MessageUpdatedEvent {
   id: string;
   chatId: string;
   text: string;
-  updateText?: string;
+  textUpdate?: string;
   documents?: DocumentDto[];
 
   constructor(partial?: Partial<MessageUpdatedEvent>) {

@@ -95,10 +95,9 @@ export class DocumentProcessService {
           messages: messages,
           temperature: 0
         });
-        const message = response.choices[0].message;
-        messages.push(message);
-        const content = message.content;
-        const result = this.schema.parse(JSON.parse(content??''));
+        const message = response.choices.at(0)?.message;
+        messages.push(message? message : {role: "assistant", content: ""});
+        const result = this.schema.parse(JSON.parse(message?.content??''));
         this.logger.log(`Page parsed`);
         return {
           ...result,

@@ -21,6 +21,7 @@ import { Document } from "src/postgres/entities/document.entity";
 import { DocumentMapper } from "src/document/mappers/document.mapper";
 import { ChatDeletedEvent } from "../events/chat-deleted.event";
 import { GenerateTitleService } from "./generate-title.service";
+import { ResultCustomChunk } from "../chunks/result.custom.chunk";
 @Injectable()
 export class ChatService {
 
@@ -126,7 +127,7 @@ export class ChatService {
     return chatsCursorDto;
   }
 
-  async getChatMessages(args: {
+  async getChatMessagesCursor(args: {
     chatId: string;
     userId: string;
     before: string;
@@ -139,13 +140,14 @@ export class ChatService {
     if (!chat) throw new AppError("CHAT_NOT_FOUND");
     if (chat.user.id !== userId) throw new AppError("PERMISSION_DENIED");
 
-    const qb = this.messageRepository
+    const messages = await this.messageRepository
       .createQueryBuilder('message')
       .leftJoinAndSelect('message.documents', 'document')
       .leftJoinAndSelect('document.contract', 'contract')
       .where('message.chatId = :chatId', { chatId })
       .andWhere('message.createdAt < :before', { before: new Date(before) })
-      .take(limit);
+      .take(limit)
+      .getMany();
 
     let itemsLeft = await this.messageRepository
       .createQueryBuilder('message')
@@ -155,10 +157,8 @@ export class ChatService {
 
     if (itemsLeft < 0) itemsLeft = 0;
 
-    const { entities } = await qb.getRawAndEntities();
-
     const messagesCursorDto = this.cursorMapper.toDto<Message, MessageDto>({
-      data: entities,
+      data: messages,
       itemsLeft,
       dataMapper: (entity: Message) => {
         return this.messageMapper.toDto({ 
@@ -180,10 +180,7 @@ export class ChatService {
     const { userId, newUserMessageDto } = args;
 
     //Получение чата, если чат был новым, то отправка события о создании чата
-    let chat = await this.chatRepository
-      .createQueryBuilder('chat')
-      .leftJoinAndSelect('chat.user', 'user')
-      .getOne();
+    let chat = await this.getChatWithUser(newUserMessageDto.chatId);
 
     if (!chat) throw new AppError("CHAT_NOT_FOUND");
 
@@ -197,187 +194,194 @@ export class ChatService {
     if (chat.user.id !== userId) throw new AppError("PERMISSION_DENIED");
     if (chat.isPending) throw new AppError("CHAT_PENDING");
 
-    const isChatNew = chat.isNew;
-
-    chat.isPending = true;
-    chat.isNew = false;
-
     try {
+      const isChatNew = chat.isNew;
+
+      chat.isPending = true;
+      chat.isNew = false;
+
       if (isChatNew) {
         const title = await this.generateTitleService.generateTitle(chat.id);
         chat.title = title??"Новый чат";
       }
+
       chat = await this.chatRepository.save(chat);
-    } catch (error) {
-      console.log(error);
-      throw new AppError("SEND_MESSAGE_INTERRUPTED");
-    }
 
+      if (isChatNew) {
+        const chatCreatedEvent: ChatDto = this.chatMapper.toDto(chat);
+        await this.wsGateway.sendEvent('chatCreated', chatCreatedEvent, userId);
+      }
+      
+      //создание сообщения, изменение статуса чата и времени последнего сообщения, отправка события о новом сообщении
+      let message = this.messageMapper.toEntity({ chat, dto: newUserMessageDto });
 
-    if (isChatNew) {
-      const chatCreatedEvent: ChatDto = this.chatMapper.toDto(chat);
-      await this.wsGateway.sendEvent('chatCreated', chatCreatedEvent, userId);
-    }
-
-
-    //создание сообщения, изменение статуса чата и времени последнего сообщения, отправка события о новом сообщении
-    let message = this.messageMapper.toEntity({ chat, dto: newUserMessageDto });
-
-    try {
       message = await this.messageRepository.save(message);
-    } catch (error) {
-      console.log(error);
-      throw new AppError("SEND_MESSAGE_INTERRUPTED");
-    }
 
-    const newUserMessageEvent: ChatUpdatedEvent = new ChatUpdatedEvent({
-      id: chat.id,
-      newMessage: this.messageMapper.toDto({
-        message: message,
-        chat
-      }),
-      isPending: chat.isPending,
-      lastMessageAt: message.createdAt.toISOString()
-    });
+      chat.lastMessageAt = message.createdAt;
 
-    await this.wsGateway.sendEvent('chatUpdated', newUserMessageEvent, userId);
+      const newUserMessageEvent: ChatUpdatedEvent = this.createChatUpdateEvent(chat, message);
 
+      await this.wsGateway.sendEvent('chatUpdated', newUserMessageEvent, userId);
 
-    //получения всех сообщений в чате для передачи агенту
-    const qb = this.messageRepository
-      .createQueryBuilder('message')
-      .leftJoinAndSelect('message.documents', 'document')
-      .where('message.chatId = :chatId', { chatId: chat.id })
-      .orderBy('message.createdAt', 'DESC');
+      //получения всех сообщений в чате для передачи агенту
+      this.logger.log("before get chat messages");
+      const chatMessages = await this.getChatMessages(chat.id);
+      this.logger.log("after get chat messages");
+      const chatMessagesDto = chatMessages.map(entity => this.messageMapper.toDto({
+        message: entity, 
+        chat: chat!, 
+        documents: entity.documents.map(doc => ({ document: doc, contract: doc.contract }))
+      }));
 
-    const { entities } = await qb.getRawAndEntities();
+      if (chatMessagesDto.length === 0) throw new Error("no messages in active chat");
+      
+      //Передача сообщений агенту
+      const response = await this.agentService.processChat(chatMessagesDto, chat.id);
 
-    const chatMessagesDto = entities.map(entity => this.messageMapper.toDto({
-      message: entity, 
-      chat: chat!, 
-      documents: entity.documents.map(doc => ({ document: doc, contract: doc.contract }))
-    }));
+      //Создание и сохранение сообщения-ответа от агента
+      let responseMessage = new Message();
+      responseMessage.chat = chat;
+      responseMessage.role = "assistant";
+      responseMessage.text = "";
 
-    if (chatMessagesDto.length === 0) throw new AppError("SEND_MESSAGE_INTERRUPTED");
-
-
-    //Передача сообщений агенту
-    const response = await this.agentService.processChat(chatMessagesDto, chat.id)
-
-
-    //Создание и сохранение сообщения-ответа от агента
-    let responseMessage = new Message();
-    responseMessage.chat = chat;
-    responseMessage.role = "assistant";
-    responseMessage.text = "";
-    try {
       responseMessage = await this.messageRepository.save(responseMessage);
-    } catch (error) {
-      console.log(error);
-      throw new AppError("SEND_MESSAGE_INTERRUPTED");
-    }
 
+      chat.lastMessageAt = responseMessage.createdAt
 
-    //Изменение времени последнего сообщения, отправка события о новом сообщении
-    const newResponseMessageEvent = new ChatUpdatedEvent({
-      id: chat.id,
-      newMessage: this.messageMapper.toDto({
-        message: responseMessage,
-        chat
-      }),
-      isPending: chat.isPending,
-      lastMessageAt: responseMessage.createdAt.toISOString()
-    });
+      //Изменение времени последнего сообщения, отправка события о новом сообщении
+      const newResponseMessageEvent = this.createChatUpdateEvent(chat, responseMessage);
 
-    await this.wsGateway.sendEvent('chatUpdated', newResponseMessageEvent, userId);
+      await this.wsGateway.sendEvent('chatUpdated', newResponseMessageEvent, userId);
 
-
-    //Обработка потокового ответа от агента, отправка событий об обновлении сообщения
-    for await (const [type, chunk] of response) {
-      if (type === "custom") {
-        if (chunk.type === "result") {
-          const data = chunk.data;
+      //Обработка потокового ответа от агента, отправка событий об обновлении сообщения
+      for await (const [type, chunk] of response) {
+        if (type === "custom" && chunk instanceof ResultCustomChunk && chunk.type === 'result') {
 
           const messageUpdateEvent = new MessageUpdatedEvent({
             id: responseMessage.id,
             chatId: chat.id,
-            text: data.text,
-            updateText: data.updateText
+            text: chunk.text,
+            textUpdate: chunk.textUpdate
           });
 
           await this.wsGateway.sendEvent('messageUpdated', messageUpdateEvent, userId);
         }
-      }
 
-      if (type === "updates") {
+        if (type === "updates") {
 
-        if (chunk.resultNode) {
-          const text: string = chunk.resultNode.result as string;
+          if (chunk.resultNode) {
+            const text: string = chunk.resultNode.result as string??"";
 
-          responseMessage.text = text;
+            responseMessage.text = text;
 
-          try {
             responseMessage =  await this.messageRepository.save(responseMessage);
-          } catch (error) {
-            console.log(error);
-            throw new AppError("SEND_MESSAGE_INTERRUPTED");
+
+            const messageUpdateEvent = new MessageUpdatedEvent({
+              id: responseMessage.id,
+              chatId: chat.id,
+              text: responseMessage.text
+            });
+          
+            await this.wsGateway.sendEvent('messageUpdated',messageUpdateEvent,userId);
           }
 
-          const messageUpdateEvent = new MessageUpdatedEvent({
-            id: responseMessage.id,
-            chatId: chat.id,
-            text: responseMessage.text
-          });
-          
-          await this.wsGateway.sendEvent('messageUpdated',messageUpdateEvent,userId);
-        }
+          if (chunk.documentsNode) {
+            const documentsNeo4jIds: number[] = chunk.documentsNode.documents as number[]??[];
 
-        if (chunk.documentsNode) {
-          const documentsNeo4jIds: number[] = chunk.documentsNode.documents as number[];
+            const documentsPostgresIds: string[] = [];
 
-          const documentsPostgresIds: string[] = [];
-
-          for (const neo4jId of documentsNeo4jIds) {
-            const postgresId = await this.neo4jRepository.getDocumentPostgresId(neo4jId);
-            if (postgresId) documentsPostgresIds.push(postgresId);
-          }
-          
-          const documents: Document[] = [];
-
-          for (const postgresId of documentsPostgresIds) {
-            let document = await this.documentRepository.findOneBy({ id: postgresId });
-            if (document) {
-              documents.push(document);
+            for (const neo4jId of documentsNeo4jIds) {
+              const postgresId = await this.neo4jRepository.getDocumentPostgresId(neo4jId);
+              if (postgresId) documentsPostgresIds.push(postgresId);
             }
-          }
-          responseMessage.documents = documents;
-          try {
+            
+            const documents: Document[] = [];
+
+            for (const postgresId of documentsPostgresIds) {
+              let document = await this.documentRepository.findOneBy({ id: postgresId });
+              if (document) {
+                documents.push(document);
+              }
+            }
+            responseMessage.documents = documents;
             responseMessage = await this.messageRepository.save(responseMessage);
-          } catch(error) {
-            console.log(error);
-            throw new AppError("SEND_MESSAGE_INTERRUPTED");
+            
+            const messageUpdateEvent = new MessageUpdatedEvent({
+              id: responseMessage.id,
+              chatId: chat.id,
+              documents: responseMessage.documents.map(doc => this.documentMapper.toDto({ document: doc, contract: doc.contract })),
+            });
+            await this.wsGateway.sendEvent('messageUpdated', messageUpdateEvent, userId);
           }
-          const messageUpdateEvent = new MessageUpdatedEvent({
-            id: responseMessage.id,
-            chatId: chat.id,
-            documents: responseMessage.documents.map(doc => this.documentMapper.toDto({ document: doc, contract: doc.contract })),
-          });
-          await this.wsGateway.sendEvent('messageUpdated', messageUpdateEvent, userId);
         }
       }
-    }
 
-    chat.isPending = false;
-    try {
+      chat.isPending = false;
       chat = await this.chatRepository.save(chat);
+      const pendingStopEvent = new ChatUpdatedEvent({
+        id: chat.id,
+        isPending: chat.isPending
+      });
+      this.wsGateway.sendEvent('chatUpdated', pendingStopEvent, userId);
+      
     } catch (error) {
-      console.log(error);
+      this.logger.error(error);
+      chat = await this.chatRepository.findOneBy({ id: newUserMessageDto.chatId });
+      if (chat) {
+        chat.isPending = false;
+        await this.chatRepository.save(chat);
+      }
+
       throw new AppError("SEND_MESSAGE_INTERRUPTED");
     }
-    const pendingStopEvent = new ChatUpdatedEvent({
+    
+  }
+
+  private createChatUpdateEvent(chat: Chat, newMessage?: Message): ChatUpdatedEvent {
+    let newMessageDto = newMessage? this.messageMapper.toDto({
+      message: newMessage,
+      chat
+    }): undefined;
+    return new ChatUpdatedEvent({
       id: chat.id,
-      isPending: chat.isPending
+      newMessage: newMessageDto,
+      isPending: chat.isPending,
+      lastMessageAt: chat.lastMessageAt?.toISOString()
     });
-    this.wsGateway.sendEvent('chatUpdated', pendingStopEvent, userId);
+  }
+
+  private async getChatWithUser(chatId: string) {
+    const chat = await this.chatRepository
+      .createQueryBuilder('chat')
+      .leftJoinAndSelect('chat.user', 'user')
+      .where('chat.id = :chatId', { chatId })
+      .getOne();
+    return chat;
+  }
+
+  private async getChatWithLastMessageAt(chatId: string) {
+    const chat = await this.chatRepository
+      .createQueryBuilder('chat')
+      .where('chat.id = :chatId', { chatId })
+      .addSelect(subQuery => {
+        return subQuery
+          .select('MAX(message.createdAt)')
+          .from(Message, 'message')
+          .where('message.chatId = chat.id')
+      }, 'lastMessageAt')
+      .orderBy('lastMessageAt', 'DESC')
+      .getOne();
+    return chat;
+  }
+
+  private async getChatMessages(chatId: string) {
+      return await this.messageRepository
+        .createQueryBuilder('message')
+        .leftJoinAndSelect('message.documents', 'document')
+        .leftJoinAndSelect('document.contract', 'contract')
+        .leftJoinAndSelect('message.chat', 'chat')
+        .where('chat.id = :chatId', { chatId })
+        .orderBy('message.createdAt', 'DESC')
+        .getMany();
   }
 }
