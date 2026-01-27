@@ -29,27 +29,27 @@ export class GenerateTitleService {
 
   async generateTitle(chatId: string) {
     const qb = this.messageRepository
-      .createQueryBuilder('message')
-      .where('message.chatId = :chatId', { chatId })
-      .orderBy('message.createdAt', 'ASC');
+    .createQueryBuilder('message')
+    .where('message.chatId = :chatId', { chatId })
+    .orderBy('message.createdAt', 'ASC');
     
     const { entities } = await qb.getRawAndEntities<Message[]>();
-
-    const messages = entities.map((message) => ({
-      role: message.role,
-      content: message.text,
-    }));
-
-    const response = await this.gigachat.chat({
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        ...messages,
-      ],
-      temperature: 0
-    });
-    const content = response.choices[0].message.content;
+    
     for (let i = 0; i < this.maxParseRetry; i++) {
       try {
+        const messages = entities.map((message) => ({
+          role: message.role,
+          content: message.text,
+        }));
+
+        const response = await this.gigachat.chat({
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            ...messages,
+          ],
+          temperature: 0
+        });
+        const content = response.choices[0].message.content;
         const result = this.schema.parse(JSON.parse(content??''));
         return result.title;
       } catch (e) {

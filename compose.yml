@@ -16,6 +16,7 @@ services:
       - MINIO_PASSWORD=${MINIO_PASSWORD}
       - APP_HOST=${APP_HOST}
       - APP_USERS=${APP_USERS}
+      - GOTENBERG_HOST=gotenberg
     depends_on:
       postgres:
         condition: service_healthy

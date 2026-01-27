@@ -16,7 +16,7 @@ import { UsersInitService } from "./services/users-init.service";
     JwtService, 
     UserService,
     UsersInitService,
-    { provide: 'AUTH_GUARD', useClass: AuthGuard }
+    AuthGuard
   ],
   exports: [
     JwtService

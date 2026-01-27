@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Chat } from "src/postgres/entities/chat.entity";
 import { User } from "src/postgres/entities/user.entity";
@@ -23,6 +23,8 @@ import { ChatDeletedEvent } from "../events/chat-deleted.event";
 import { GenerateTitleService } from "./generate-title.service";
 @Injectable()
 export class ChatService {
+
+  private readonly logger = new Logger(ChatService.name);
   
   constructor(
     @InjectRepository(Chat) private readonly chatRepository: Repository<Chat>,
@@ -52,7 +54,8 @@ export class ChatService {
   }
 
   async getNewChat(userId: string) {
-    const user = await this.userRepository.findOneByOrFail({ id: userId })
+    const user = await this.userRepository.findOneBy({ id: userId });
+    if (!user) throw new AppError("USER_NOT_FOUND");
     let chat = await this.chatRepository.findOne({
       where: {
         user: {
@@ -177,9 +180,20 @@ export class ChatService {
     const { userId, newUserMessageDto } = args;
 
     //Получение чата, если чат был новым, то отправка события о создании чата
-    let chat = await this.chatRepository.findOneBy({ id: newUserMessageDto.chatId });
+    let chat = await this.chatRepository
+      .createQueryBuilder('chat')
+      .leftJoinAndSelect('chat.user', 'user')
+      .getOne();
 
     if (!chat) throw new AppError("CHAT_NOT_FOUND");
+
+    this.logger.log(`
+      userId from request: ${userId},
+      userid from chat: ${chat.user.id},
+      newMessageDto: ${JSON.stringify(newUserMessageDto)},
+      fullChat: ${JSON.stringify(chat)}
+    `);
+
     if (chat.user.id !== userId) throw new AppError("PERMISSION_DENIED");
     if (chat.isPending) throw new AppError("CHAT_PENDING");
 
@@ -190,8 +204,8 @@ export class ChatService {
 
     try {
       if (isChatNew) {
-        const title = await this.generateTitleService.generateTitle(chat.id)??"Новый чат";
-        chat.title = title;
+        const title = await this.generateTitleService.generateTitle(chat.id);
+        chat.title = title??"Новый чат";
       }
       chat = await this.chatRepository.save(chat);
     } catch (error) {
@@ -232,6 +246,7 @@ export class ChatService {
     //получения всех сообщений в чате для передачи агенту
     const qb = this.messageRepository
       .createQueryBuilder('message')
+      .leftJoinAndSelect('message.documents', 'document')
       .where('message.chatId = :chatId', { chatId: chat.id })
       .orderBy('message.createdAt', 'DESC');
 
