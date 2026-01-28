@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import GigaChat from "gigachat";
 import { InjectGigachat } from "src/gigachat/gigachat.decorator";
 import z from "zod";
@@ -12,6 +12,7 @@ import { Repository } from "typeorm";
 @Injectable()
 export class GenerateTitleService {
 
+  private readonly logger = new Logger(GenerateTitleService.name);
 
   private readonly schema = z.object({
     title: z.string(),
@@ -28,20 +29,16 @@ export class GenerateTitleService {
   }
 
 
-  async generateTitle(chatId: string) {
-    const qb = this.messageRepository
-    .createQueryBuilder('message')
-    .where('message.chatId = :chatId', { chatId })
-    .orderBy('message.createdAt', 'ASC');
+  async generateTitle(messages: Message[]) {
     
-    const { entities } = await qb.getRawAndEntities<Message[]>();
+    this.logger.log("messageEntities", JSON.stringify(messages));
     
-    const chatMessages = entities.map((message) => ({
+    const chatMessages = messages.map((message) => ({
       role: message.role,
       content: message.text,
     }));
 
-    const messages: GigachatMessage[] = [
+    const agentMessages: GigachatMessage[] = [
       {role: "system", content: SYSTEM_PROMPT},
       ...chatMessages
     ]
@@ -49,15 +46,15 @@ export class GenerateTitleService {
     for (let i = 0; i < this.maxParseRetry; i++) {
       try {
         const response = await this.gigachat.chat({
-          messages,
+          messages: agentMessages,
           temperature: 0
         });
         const message = response.choices.at(0)?.message;
-        messages.push(message? message : { role: "assistant", content: "" });
+        agentMessages.push(message? message : { role: "assistant", content: "" });
         const result = this.schema.parse(JSON.parse(message?.content??''));
         return result.title;
       } catch (e) {
-        messages.push({role: "user", content: RETRY_PROMPT});
+        agentMessages.push({role: "user", content: RETRY_PROMPT});
         continue;
       }
     }

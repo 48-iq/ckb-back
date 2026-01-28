@@ -83,22 +83,23 @@ export class ChatService {
     limit: number;
   }): Promise<CursorDto<ChatDto>> {
     const { userId, before, limit } = args;
+    this.logger.log(`getUserChats userId: ${userId}, before: ${before}, limit: ${limit}`);
     const user = await this.userRepository.findOneBy({ id: userId });
 
     if (!user) throw new AppError("USER_NOT_FOUND");
 
     const qb = this.chatRepository
       .createQueryBuilder('chat')
+      .addSelect(subQuery => {
+        return subQuery
+        .select('MAX(message.createdAt)')
+        .from(Message, 'message')
+        .where('message.chatId = chat.id')
+      }, 'lastMessageAt')
       .where('chat.isNew = false')
       .andWhere('chat.userId = :userId', { userId })
       .andWhere('chat.createdAt < :before', { before: new Date(before) })
-      .addSelect(subQuery => {
-        return subQuery
-          .select('MAX(message.createdAt)')
-          .from(Message, 'message')
-          .where('message.chatId = chat.id')
-      }, 'lastMessageAt')
-      .orderBy('lastMessageAt', 'DESC')
+      .orderBy('"lastMessageAt"', 'DESC')
       .take(limit);
 
     let itemsLeft = await this.chatRepository
@@ -135,7 +136,11 @@ export class ChatService {
   }) {
     const { chatId, before, limit, userId } = args;
 
-    const chat = await this.chatRepository.findOneBy({ id: chatId });
+    const chat = await this.chatRepository
+      .createQueryBuilder('chat')
+      .leftJoinAndSelect('chat.user', 'user')
+      .where('chat.id = :chatId', { chatId })
+      .getOne();
 
     if (!chat) throw new AppError("CHAT_NOT_FOUND");
     if (chat.user.id !== userId) throw new AppError("PERMISSION_DENIED");
@@ -196,30 +201,30 @@ export class ChatService {
 
     try {
       const isChatNew = chat.isNew;
-
       chat.isPending = true;
       chat.isNew = false;
 
+      //создание сообщения, изменение статуса чата и времени последнего сообщения, отправка события о новом сообщении
+      let userMessage = this.messageMapper.toEntity({ chat, dto: newUserMessageDto });
+
       if (isChatNew) {
-        const title = await this.generateTitleService.generateTitle(chat.id);
+        this.logger.log(`before generate title`);
+        const title = await this.generateTitleService.generateTitle([userMessage]);
+        this.logger.log(`title: ${title}`);
         chat.title = title??"Новый чат";
       }
 
       chat = await this.chatRepository.save(chat);
+      userMessage = await this.messageRepository.save(userMessage);
 
       if (isChatNew) {
         const chatCreatedEvent: ChatDto = this.chatMapper.toDto(chat);
         await this.wsGateway.sendEvent('chatCreated', chatCreatedEvent, userId);
       }
       
-      //создание сообщения, изменение статуса чата и времени последнего сообщения, отправка события о новом сообщении
-      let message = this.messageMapper.toEntity({ chat, dto: newUserMessageDto });
+      chat.lastMessageAt = userMessage.createdAt;
 
-      message = await this.messageRepository.save(message);
-
-      chat.lastMessageAt = message.createdAt;
-
-      const newUserMessageEvent: ChatUpdatedEvent = this.createChatUpdateEvent(chat, message);
+      const newUserMessageEvent: ChatUpdatedEvent = this.createChatUpdateEvent(chat, userMessage);
 
       await this.wsGateway.sendEvent('chatUpdated', newUserMessageEvent, userId);
 
