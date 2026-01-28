@@ -151,6 +151,7 @@ export class ChatService {
       .leftJoinAndSelect('document.contract', 'contract')
       .where('message.chatId = :chatId', { chatId })
       .andWhere('message.createdAt < :before', { before: new Date(before) })
+      .orderBy('message.createdAt', 'DESC')
       .take(limit)
       .getMany();
 
