@@ -25,9 +25,6 @@ export class AgentService {
   private shouldContinueEdge = (state: typeof State.State) => {
     const { messages, maxSteps, totalSteps} = state;
     const lastMessage = messages.at(-1);
-    this.logger.log(`last message: ${JSON.stringify(lastMessage)}`);
-    this.logger.log(`total steps: ${totalSteps}, max steps: ${maxSteps}, maxSteps <= totalSteps: ${maxSteps <= totalSteps}`);
-    this.logger.log(`last message function_call: ${lastMessage?.function_call}`);
     if (maxSteps <= totalSteps) return "resultNode";
     if (lastMessage === undefined) return "resultNode";
     if (lastMessage.function_call) return "functionsNode";

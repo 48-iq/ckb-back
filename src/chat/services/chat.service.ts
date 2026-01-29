@@ -145,7 +145,7 @@ export class ChatService {
     if (!chat) throw new AppError("CHAT_NOT_FOUND");
     if (chat.user.id !== userId) throw new AppError("PERMISSION_DENIED");
 
-    const messages = await this.messageRepository
+    let messages = await this.messageRepository
       .createQueryBuilder('message')
       .leftJoinAndSelect('message.documents', 'document')
       .leftJoinAndSelect('document.contract', 'contract')
@@ -154,6 +154,8 @@ export class ChatService {
       .orderBy('message.createdAt', 'DESC')
       .take(limit)
       .getMany();
+      
+    messages = messages.reverse();
 
     let itemsLeft = await this.messageRepository
       .createQueryBuilder('message')
