@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Inject, Param, Post, Query, Req } from "@nestjs/common"
 import { ChatService } from "./services/chat.service"
-import { NewUserMessageDto } from "./dto/new-user-message.dto";
+import { NewMessageDto } from "./dto/new-message.dto";
 
 
 @Controller("/api/chats")
@@ -18,42 +18,43 @@ export class ChatController {
     @Query("before") before: string
   ) {
     const userId = req["userId"];
-    return await this.chatService.getUserChats({ userId, before, limit });
+    return await this.chatService.getUserChatsCursor({ userId, before, limit });
   }
 
-  @Get("/messages")
+  @Get("/:chatId/messages")
   async getChatMessages(
     @Req() req,
     @Query("limit") limit: number,
     @Query("before") before: string,
-    @Query("chatId") chatId: string
+    @Param("chatId") chatId: string
   ) {
     const userId = req["userId"];
     return await this.chatService.getChatMessagesCursor({ userId, before, limit, chatId });
   }
 
-  @Get("/new")
-  async getNewChat(@Req() req) {
-    const userId = req["userId"];
-    return await this.chatService.getNewChat(userId);
-  }
-
-  @Delete(":chatId")
+  @Delete("/:chatId")
   async deleteChat(@Req() req, @Param("chatId") chatId: string) {
     const userId = req["userId"];
     return await this.chatService.deleteChat(chatId, userId);
   }
 
-  @Post("/messages") 
+  @Post("/:chatId/messages") 
   async sendMessage(
     @Req() req, 
-    @Body() body: NewUserMessageDto
+    @Param("chatId") chatId: string,
+    @Body() body: NewMessageDto
   ) {
     const userId = req["userId"];
-    await this.chatService.sendMessage({
-      userId,
-      newUserMessageDto: body
-    });
+    await this.chatService.sendMessage({ userId, chatId, text: body.text});
+  }
+
+  @Post()
+  async createChat(
+    @Req() req,
+    @Body() body: NewMessageDto
+  ) {
+    const userId = req["userId"];
+    await this.chatService.sendMessage({ userId, text: body.text });
   }
   
 }

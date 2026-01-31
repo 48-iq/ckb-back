@@ -5,13 +5,23 @@ export class MessageDto {
   id: string;
   role: MessageRole;
   text: string;
-  documents?: DocumentDto[];
+  streaming: boolean;
+  error: string | null;
+  documents: DocumentDto[];
   chatId: string;
   createdAt: string;
 
-  constructor(partial?: Partial<MessageDto>) {
-    if (partial)
-      Object.assign(this, partial);
+  constructor(args: {
+    id: string;
+    role: MessageRole;
+    text: string;
+    streaming: boolean;
+    error: string | null;
+    documents: DocumentDto[];
+    chatId: string;
+    createdAt: string;
+  }) {
+    Object.assign(this, args);
   }
 }
 

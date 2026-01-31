@@ -1,10 +1,12 @@
-import { Provider } from "@nestjs/common";
+import { Logger, Provider } from "@nestjs/common";
 import { State } from "../agent.state";
 import GigaChat from "gigachat";
 import { GIGACHAT } from "src/gigachat/gigachat.provider";
 import { FunctionsService } from "../services/functions.service";
 
-export const AGENT_NODE = 'AGENT_NODE'
+export const AGENT_NODE = 'AGENT_NODE';
+
+const logger = new Logger("AgentNodeProvider");
 
 export const AgentNodeProvider: Provider = {
   provide: AGENT_NODE,
@@ -34,6 +36,8 @@ export const AgentNodeProvider: Provider = {
 
       const newTotalTokens = response.usage.total_tokens + totalTokens;
       const newTotalSteps = totalSteps + 1;
+
+      logger.log(`step ${newTotalSteps}: ${JSON.stringify(message)}`);
       
 
       return { messages: [...messages, message], totalTokens: newTotalTokens, totalSteps: newTotalSteps };

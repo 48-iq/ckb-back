@@ -21,15 +21,12 @@ export class Chat {
   title: string;
 
   @Column()
-  isNew: boolean;
-
-  @Column()
   isPending: boolean;
 
   @CreateDateColumn({type: 'timestamp', default: () => "CURRENT_TIMESTAMP(6)"})
   createdAt: Date;
 
-  @ManyToOne(() => User, user => user.chats)
+  @ManyToOne(() => User, user => user.chats, { eager: true})
   user: User;
 
   @OneToMany(() => Message, message => message.chat)

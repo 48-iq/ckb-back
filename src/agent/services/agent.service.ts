@@ -7,12 +7,15 @@ import { PLAN_NODE } from "../nodes/plan-node.provider";
 import { RESULT_NODE } from "../nodes/result-node.provider";
 import { FUNCTIONS_NODE } from "../nodes/functions-node";
 import { MessageDto } from "src/chat/dto/message.dto";
-import { Message } from "gigachat/interfaces";
+import { Message as GigachatMessage } from "gigachat/interfaces";
+import { ConfigService } from "@nestjs/config";
+import { Message } from "src/postgres/entities/message.entity";
 
 @Injectable()
 export class AgentService {
 
   private readonly logger = new Logger(AgentService.name);
+  private readonly maxAgentSteps;
 
   agent: CompiledStateGraph<
     typeof State.State,
@@ -25,7 +28,7 @@ export class AgentService {
   private shouldContinueEdge = (state: typeof State.State) => {
     const { messages, maxSteps, totalSteps} = state;
     const lastMessage = messages.at(-1);
-    if (maxSteps <= totalSteps) return "resultNode";
+    if (totalSteps > maxSteps) return "resultNode";
     if (lastMessage === undefined) return "resultNode";
     if (lastMessage.function_call) return "functionsNode";
     return "resultNode";
@@ -36,9 +39,10 @@ export class AgentService {
     @Inject(AGENT_NODE) private readonly agentNode,
     @Inject(RESULT_NODE) private readonly resultNode,
     @Inject(DOCUMENT_NODE) private readonly documentNode,
-    @Inject(FUNCTIONS_NODE) private readonly functionsNode
+    @Inject(FUNCTIONS_NODE) private readonly functionsNode,
+    private readonly configService: ConfigService
   ) {
-
+    this.maxAgentSteps = +configService.getOrThrow<string>('MAX_AGENT_STEPS');
     this.agent = new StateGraph(State)
       .addNode("planNode", planNode)
       .addNode("agentNode", agentNode)
@@ -55,43 +59,49 @@ export class AgentService {
   }
 
   private createState(args: {
-    messagesDto: MessageDto[],
+    messages: Message[],
     maxTokens?: number
   }) {
-    if (!args.messagesDto || args.messagesDto.length === 0) 
-      return { messages: [{ role: "user", text: "Вопрос отсутствует" }] };
-    const messages: Message[] = []
-    for (let i = 0; i < args.messagesDto.length; i++) {
-      const message = args.messagesDto[i];
-      const processedMessage = {
+    if (!args.messages || args.messages.length === 0) 
+      return { messages: [{ role: "user", text: "=====ГЛАВНЫЙ ВОПРОС=====\nВопрос отсутствует" }] };
+    const gigachatMessages: GigachatMessage[] = []
+    for (let i = 0; i < args.messages.length; i++) {
+      const message = args.messages[i];
+      const gigachatMessage = {
         role: message.role,
         content: message.text
       };
-      if (message.role === "user") {
-        processedMessage.content = `${message.text}` + 
-        `${message.documents?"\n=====ДОКУМЕНТЫ=====\n":""}` + 
-        `${message.documents?.map(doc => doc.title).join('\n')}`;
+      if (message.role === "assistant") {
+        let documentsText = ""
+        if (message.documents && message.documents.length > 0) {
+          documentsText = `\n=====ДОКУМЕНТЫ=====\n${message.documents.map(doc => doc.title).join('\n')}`
+        }
+        gigachatMessage.content = `${message.text}${documentsText}`; 
       }
-      if (i === args.messagesDto.length - 1) {
-        processedMessage.content = `=====ГЛАВНЫЙ ВОПРОС=====\n${processedMessage.content}`
+      if (i === args.messages.length - 1) {
+        gigachatMessage.content = `=====ГЛАВНЫЙ ВОПРОС=====\n${gigachatMessage.content}`
       }
-      messages.push(processedMessage);
+      this.logger.log(`messages: ${JSON.stringify(gigachatMessage)}`);
+      gigachatMessages.push(gigachatMessage);
     }
     return {
-      messages,
-      totalTokens: 0
+      messages: gigachatMessages,
+      totalTokens: 0,
+      totalSteps: 0,
+      maxSteps: this.maxAgentSteps
     };
   }
   
-  async processChat(messages: MessageDto[], chatId: string) {
+  async processMessages(messages: Message[], chatId: string) {
     const abortController = new AbortController();
     this.abortMap.set(chatId, abortController);
-    const state = this.createState({ messagesDto: messages });
+    const state = this.createState({ messages });
     const result = await this.agent.stream(
       state,
       {
         streamMode: ["custom", "updates"],
-        signal: abortController.signal
+        signal: abortController.signal,
+        recursionLimit: (this.maxAgentSteps + 5)
       },
     )
     return result;

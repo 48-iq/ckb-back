@@ -27,6 +27,12 @@ export class Message {
   @Column()
   text: string;
 
+  @Column({nullable: true})
+  error: string|null;
+
+  @Column()
+  streaming: boolean;
+
   @ManyToOne(() => Chat, chat => chat.messages )
   chat: Chat;
   

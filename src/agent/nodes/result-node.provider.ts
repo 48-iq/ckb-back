@@ -4,7 +4,22 @@ import { LangGraphRunnableConfig } from "@langchain/langgraph";
 import { GIGACHAT } from "src/gigachat/gigachat.provider";
 import GigaChat from "gigachat";
 import { ResultCustomChunk } from "src/chat/chunks/result.custom.chunk";
+import { MessageRole } from "gigachat/interfaces";
 
+function getRoleText (role: MessageRole) {
+  switch (role) {
+    case 'system':
+      return '=====SYSTEM PROMPT=====\n';
+    case 'user':
+      return '=====USER MESSAGE=====\n';
+    case 'assistant':
+      return '=====PREVIOUS AGENT MESSAGE=====\n';
+    case 'function':
+      return '=====FUNCTION CALL RESULT=====\n';
+    default:
+      return '';
+  }
+}
 
 
 export const RESULT_NODE = 'RESULT_NODE';
@@ -17,16 +32,28 @@ export const ResultNodeProvider: Provider = {
       
       const { messages, totalTokens } = state;
       let text = '';
+      const previousAgentMessages = messages.map((message) => {
+        const functionCall = message.function_call;
+        let content = `${getRoleText(message.role)}${message.content}`;
+        if (functionCall) {
+          content = `${content} \n =====function call=====\n ${JSON.stringify(functionCall)}`;
+        }
+        return { 
+          role: "user", 
+          content
+        };
+      });
       for await (let chunk of model.stream({
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          ...messages,
+          ...previousAgentMessages,
         ],
         temperature: 0,
       })) {
         if (config.signal?.aborted) return;
         const textUpdate = chunk.choices[0]?.delta.content||'';
         text += textUpdate;
+        logger.log(`result chunk: ${textUpdate}`);
         if (config.writer) {
           config.writer(new ResultCustomChunk({ type: 'result', text, textUpdate }));
         }
@@ -42,6 +69,7 @@ export const ResultNodeProvider: Provider = {
         resultTokens += token.tokens;
       }
       const newTotalTokens = totalTokens + resultTokens;
+      logger.log(`result: ${text}`);
       return { result: text,  totalTokens: newTotalTokens };
     }
   }
@@ -55,21 +83,8 @@ const SYSTEM_PROMPT = `
 фразы "на основе предоставленных данных" или "с помощью полученной информации", упоминание агента и т.д.
 
 Твоя задача лаконично ответить пользователю, перефразируя ответ предыдущего агента, словно ты общаешься с ним в чате, 
-не упоминая граф, id узлов, название инструментов.
-
-Аргументами могут служить отрывки из текста, например: в документах указано "...Зиновьев обязуется сделать ремонт на Вавилова д. 6...",
-а также логические сопоставления, например: Единственным подрядчиком фигурирующим в документе о ремонте на Вавилова д. 6, является Зиновьев.
-
-###
-Вот пример:
-Вопрос: Какой подрядчик сделал ремонт на Вавилова д. 6.
-
-...рассуждения прошлого агента...
-
-Ответ прошлого агента:  "На основе предоставленных данных, это подрядчик Зиновьев, 
-об этом сообщается в узле номер 115: "...настоящим положением подрядчик Зиновьев обязуется сделать ремонт на Вавилова д. 6...".
-
-Твой ответ: Это подрядчик Зиновьев, в документах указано "...Зиновьев обязуется сделать ремонт на Вавилова д. 6...".
+не упоминая граф, id узлов, название инструментов, плана запроса, фразы "на основе предоставленных данных" или 
+"с помощью полученной информации" и т.д.
 
 ###
 Не выдумывай информацию, строго следуй заданному формату.

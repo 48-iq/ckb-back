@@ -49,6 +49,8 @@ import { WsModule } from './ws/ws.module'
         GOTENBERG_HOST: Joi.string().required(),
         GOTENBERG_PORT: Joi.string().required(),
 
+        MAX_AGENT_STEPS: Joi.number().required(),
+
         MAX_NODE_DATA_LENGTH: Joi.number().required(),
 
         APP_USERS: Joi.string().required()

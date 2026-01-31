@@ -25,13 +25,10 @@ export class GenerateTitleService {
     @InjectRepository(Message) private readonly messageRepository: Repository<Message>,
     private readonly configService: ConfigService,
   ) {
-    this.maxParseRetry = +(this.configService.get<string>('MAX_PARSE_RETRY') || '5');
+    this.maxParseRetry = +this.configService.getOrThrow<string>('MAX_PARSE_RETRY');
   }
 
-
   async generateTitle(messages: Message[]) {
-    
-    this.logger.log("messageEntities", JSON.stringify(messages));
     
     const chatMessages = messages.map((message) => ({
       role: message.role,

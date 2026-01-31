@@ -1,9 +1,11 @@
-import { Provider } from "@nestjs/common";
+import { Logger, Provider } from "@nestjs/common";
 import { FunctionsService } from "../services/functions.service";
 import { State } from "../agent.state";
 import { ConfigService } from "@nestjs/config";
 
 export const FUNCTIONS_NODE = 'FUNCTIONS_NODE';
+
+const logger = new Logger("FunctionsNodeProvider");
 
 export const FunctionsNodeProvider: Provider = {
   provide: FUNCTIONS_NODE,
@@ -19,8 +21,9 @@ export const FunctionsNodeProvider: Provider = {
           lastMessage.function_call.name,
           lastMessage.function_call.arguments
         );
-        
-        return { messages: [...messages, { role: "function", content: JSON.stringify(result) }] };
+        const newMessage = { role: "function", content: JSON.stringify(result) };
+        logger.log(`function call: ${JSON.stringify(newMessage)}`);
+        return { messages: [...messages, newMessage] };
       }
       return { messages };
     }
