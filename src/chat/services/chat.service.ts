@@ -6,7 +6,6 @@ import { Repository } from "typeorm";
 import { ChatMapper } from "../mappers/chat.mapper";
 import { Message } from "src/postgres/entities/message.entity";
 import { AppError } from "src/shared/errors/app.error";
-import { NewMessageDto } from "../dto/new-message.dto";
 import { WsGateway } from "src/ws/ws.gateway";
 import { MessageMapper } from "../mappers/message.mapper";
 import { CursorDto } from "../../shared/dto/cursor.dto";
@@ -53,7 +52,6 @@ export class ChatService {
     limit: number;
   }): Promise<CursorDto<ChatDto>> {
     const { userId, before, limit } = args;
-    this.logger.log(`getUserChats userId: ${userId}, before: ${before}, limit: ${limit}`);
     const user = await this.userRepository.findOneBy({ id: userId });
 
     if (!user) throw new AppError("USER_NOT_FOUND");
@@ -66,16 +64,14 @@ export class ChatService {
         .from(Message, 'message')
         .where('message.chatId = chat.id')
       }, 'lastMessageAt')
-      .where('chat.isNew = false')
-      .andWhere('chat.userId = :userId', { userId })
+      .where('chat.userId = :userId', { userId })
       .andWhere('chat.createdAt < :before', { before: new Date(before) })
       .orderBy('"lastMessageAt"', 'DESC')
       .take(limit);
 
     let itemsLeft = await this.chatRepository
       .createQueryBuilder('chat')
-      .where('chat.isNew = false')
-      .andWhere('chat.userId = :userId', { userId })
+      .where('chat.userId = :userId', { userId })
       .andWhere('chat.createdAt < :before', { before: new Date(before) })
       .getCount() - limit;
     
@@ -119,6 +115,7 @@ export class ChatService {
       .createQueryBuilder('message')
       .leftJoinAndSelect('message.documents', 'document')
       .leftJoinAndSelect('document.contract', 'contract')
+      .leftJoinAndSelect('message.chat', 'chat')
       .where('message.chatId = :chatId', { chatId })
       .andWhere('message.createdAt < :before', { before: new Date(before) })
       .orderBy('message.createdAt', 'DESC')
@@ -175,33 +172,41 @@ export class ChatService {
         chat = new Chat();
         chat.user = user;
         chat.title = "Новый чат";
+        chat.isPending = true;
         chat = await this.chatRepository.save(chat);
 
         await this.wsGateway.sendEvent('chatCreated', this.chatMapper.toChatDto(chat), userId);
       }
 
-      let userMessage = this.messageMapper.toEntity({ chat, text });
+      let userMessage = this.messageMapper.toUserMessageEntity({ chat, text });
       userMessage = await this.messageRepository.save(userMessage);
       let userMessageDto: MessageDto = this.messageMapper.toDto(userMessage);
       await this.wsGateway.sendEvent('messageCreated', userMessageDto, userId);
       
       chat.lastMessageAt = userMessage.createdAt;
+      this.wsGateway.sendEvent('chatUpdated', this.chatMapper.toChatDto(chat), userId);
 
       //получения всех сообщений в чате для передачи агенту
       const chatMessages = await this.getChatMessages(chat.id);
 
+      
+      if (chatMessages.length === 0) throw new Error("No messages in active chat");
+      
+      await this.agentProcessService.processMessages({ chat, messages: chatMessages, userId });
+      
       this.generateTitleService.generateTitle(chatMessages).then(async (title) => {
-        const chat = await this.chatRepository.findOneBy({ id: chatId });
         if (chat) {
+          this.logger.log(`title generated: ${title} for chat ${chat.id}`);
           chat.title = title??chat.title;
           await this.chatRepository.save(chat);
           this.wsGateway.sendEvent('chatUpdated', this.chatMapper.toChatDto(chat), userId);
         }
       });
 
-      if (chatMessages.length === 0) throw new Error("No messages in active chat");
-
-      this.agentProcessService.processMessages({ chat, messages: chatMessages, userId });
+      chat.isPending = false;
+      await this.chatRepository.save(chat);
+      this.wsGateway.sendEvent('chatUpdated', this.chatMapper.toChatDto(chat), userId);
+      
 
     } catch (error) {
       this.logger.error(error);
@@ -215,22 +220,15 @@ export class ChatService {
     
   }
 
-  private async getChatWithUser(chatId: string) {
-    const chat = await this.chatRepository
-      .createQueryBuilder('chat')
-      .leftJoinAndSelect('chat.user', 'user')
-      .where('chat.id = :chatId', { chatId })
-      .getOne();
-    return chat;
-  }
-
-  async getChat(chatId: string) {
+  async getChat(args: {chatId: string, userId: string}) {
+    const { chatId, userId } = args;
     const chat = await this.chatRepository
       .createQueryBuilder('chat')
       .leftJoinAndSelect('chat.user', 'user')
       .where('chat.id = :chatId', { chatId })
       .getOne();
     if (!chat) throw new AppError("CHAT_NOT_FOUND");
+    if (chat.user.id !== userId) throw new AppError("PERMISSION_DENIED");
     return this.chatMapper.toChatDto(chat);
   }
 

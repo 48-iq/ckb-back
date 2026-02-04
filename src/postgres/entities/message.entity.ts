@@ -28,7 +28,7 @@ export class Message {
   text: string;
 
   @Column({nullable: true})
-  error: string|null;
+  error?: string;
 
   @Column()
   streaming: boolean;

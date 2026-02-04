@@ -21,6 +21,15 @@ export class ChatController {
     return await this.chatService.getUserChatsCursor({ userId, before, limit });
   }
 
+  @Get("/:chatId")
+  async getChat(
+    @Req() req,
+    @Param("chatId") chatId: string
+  ) {
+    const userId = req["userId"];
+    return await this.chatService.getChat({ chatId, userId});
+  }
+
   @Get("/:chatId/messages")
   async getChatMessages(
     @Req() req,
@@ -38,7 +47,7 @@ export class ChatController {
     return await this.chatService.deleteChat(chatId, userId);
   }
 
-  @Post("/:chatId/messages") 
+  @Post("/:chatId") 
   async sendMessage(
     @Req() req, 
     @Param("chatId") chatId: string,

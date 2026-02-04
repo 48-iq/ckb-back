@@ -15,6 +15,7 @@ import { SharedModule } from "src/shared/shared.module";
 import { GenerateTitleService } from "./services/generate-title.service";
 import { DocumentModule } from "src/document/document.module";
 import { Contract } from "src/postgres/entities/contract.entity";
+import { AgentProcessService } from "./services/agent-process.service";
 
 
 @Module({
@@ -26,7 +27,7 @@ import { Contract } from "src/postgres/entities/contract.entity";
     WsModule, 
     SharedModule
   ],
-  providers: [ChatService, ChatMapper, MessageMapper, GenerateTitleService],
+  providers: [AgentProcessService, ChatService, ChatMapper, MessageMapper, GenerateTitleService],
   controllers: [ChatController]
 })
 export class ChatModule {}

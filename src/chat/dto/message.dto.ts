@@ -16,7 +16,7 @@ export class MessageDto {
     role: MessageRole;
     text: string;
     streaming: boolean;
-    error: string | null;
+    error?: string;
     documents: DocumentDto[];
     chatId: string;
     createdAt: string;

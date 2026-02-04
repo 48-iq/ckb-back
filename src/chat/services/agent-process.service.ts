@@ -9,15 +9,18 @@ import { Neo4jRepository } from "src/neo4j/neo4j.repository";
 import { Document } from "src/postgres/entities/document.entity";
 import { MessageDto } from "../dto/message.dto";
 import { MessageMapper } from "../mappers/message.mapper";
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
 
 
+@Injectable()
 export class AgentProcessService {
 
   constructor(
+    @InjectRepository(Message) private readonly messageRepository: Repository<Message>,
+    @InjectRepository(Document) private readonly documentRepository: Repository<Document>,
     private readonly agentService: AgentService,
     private readonly wsGateway: WsGateway,
-    private readonly messageRepository: Repository<Message>,
-    private readonly documentRepository: Repository<Document>,
     private readonly messageMapper: MessageMapper,
     private readonly neo4jRepository: Neo4jRepository,
     private readonly chatMapper: ChatMapper
@@ -27,23 +30,20 @@ export class AgentProcessService {
     const { messages, userId} = props;
     let chat = props.chat;
     
+    
     let responseMessage = this.createEmptyAssistantMessage(chat);
     responseMessage = await this.messageRepository.save(responseMessage);
+    let responseMessageDto: MessageDto = this.messageMapper.toDto(responseMessage);
+    await this.wsGateway.sendEvent('messageCreated', responseMessageDto, userId);
+
+    chat.lastMessageAt = responseMessage.createdAt;
+    let chatDto = this.chatMapper.toChatDto(chat);
+    await this.wsGateway.sendEvent('chatUpdated', chatDto, userId);
     
     try {
-      const response = await this.agentService.processMessages(messages, chat.id);
-  
-      //Создание и сохранение сообщения-ответа от агента
-      chat.lastMessageAt = responseMessage.createdAt;
-
-      let chatDto = this.chatMapper.toChatDto(chat);
-      await this.wsGateway.sendEvent('chatUpdated', chatDto, userId);
-  
-      //отправка события о новом сообщении
-      let responseMessageDto: MessageDto = this.messageMapper.toDto(responseMessage);
       
-      await this.wsGateway.sendEvent('messageCreated', responseMessageDto, userId);
-  
+      const response = await this.agentService.processMessages(messages, chat.id);
+       
       //Обработка потокового ответа от агента, отправка событий об обновлении сообщения
       for await (const [type, chunk] of response) {
         if (type === "custom" && chunk instanceof ResultCustomChunk && chunk.type === 'result') {
@@ -98,9 +98,8 @@ export class AgentProcessService {
     message.chat = chat;
     message.role = "assistant";
     message.text = "";
-    message.streaming = false;
+    message.streaming = true;
     message.documents = [];
-    message.error = null;
     return message;
   }
 }

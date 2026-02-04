@@ -39,7 +39,7 @@ export class MessageMapper {
     return messageDto; 
   }
 
-  toEntity(args: {
+  toUserMessageEntity(args: {
     text: string,
     chat: Chat
   }) {
@@ -48,6 +48,7 @@ export class MessageMapper {
     message.chat = chat;
     message.role = "user";
     message.text = text;
+    message.streaming = false;
     return message;
   }
 }
