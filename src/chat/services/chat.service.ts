@@ -153,8 +153,8 @@ export class ChatService {
 
     try {
       if (chatId) {
-
         chat = await this.chatRepository.findOneBy({ id: chatId });
+
 
         if (!chat) throw new AppError("CHAT_NOT_FOUND");
         if (chat.user.id !== userId) throw new AppError("PERMISSION_DENIED");
@@ -180,8 +180,11 @@ export class ChatService {
 
       let userMessage = this.messageMapper.toUserMessageEntity({ chat, text });
       userMessage = await this.messageRepository.save(userMessage);
-      let userMessageDto: MessageDto = this.messageMapper.toDto(userMessage);
-      await this.wsGateway.sendEvent('messageCreated', userMessageDto, userId);
+      await this.wsGateway.sendEvent(
+        'messageCreated', 
+        this.messageMapper.toDto(userMessage),
+        userId
+      );
       
       chat.lastMessageAt = userMessage.createdAt;
       this.wsGateway.sendEvent('chatUpdated', this.chatMapper.toChatDto(chat), userId);
@@ -203,11 +206,6 @@ export class ChatService {
         }
       });
 
-      chat.isPending = false;
-      await this.chatRepository.save(chat);
-      this.wsGateway.sendEvent('chatUpdated', this.chatMapper.toChatDto(chat), userId);
-      
-
     } catch (error) {
       this.logger.error(error);
       if (chat) {
@@ -216,6 +214,12 @@ export class ChatService {
       }
       if (error instanceof AppError) throw error;
       throw new AppError("SEND_MESSAGE_INTERRUPTED");
+    } finally {
+      if (chat) {
+        chat.isPending = false;
+        await this.chatRepository.save(chat);
+        this.wsGateway.sendEvent('chatUpdated', this.chatMapper.toChatDto(chat), userId);
+      }
     }
     
   }

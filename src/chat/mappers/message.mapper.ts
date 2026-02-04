@@ -18,14 +18,14 @@ export class MessageMapper {
     this.host = this.configService.getOrThrow<string>('APP_HOST');
   }
 
-  toDto(message: Message) {
+  toDto(message: Message, options?: { streaming?: boolean }) {
     const messageDto = new MessageDto({
       id: message.id,
       role: message.role,
       text: message.text,
       chatId: message.chat.id,
       createdAt: message.createdAt.toISOString(),
-      streaming: message.streaming,
+      streaming: options?.streaming ?? false,
       error: message.error,
       documents: message.documents?.map(
         doc => this.documentMapper.toDto(
@@ -48,7 +48,6 @@ export class MessageMapper {
     message.chat = chat;
     message.role = "user";
     message.text = text;
-    message.streaming = false;
     return message;
   }
 }
