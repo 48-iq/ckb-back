@@ -33,8 +33,11 @@ export class AgentProcessService {
     
     let responseMessage = this.createEmptyAssistantMessage(chat);
     responseMessage = await this.messageRepository.save(responseMessage);
-    let responseMessageDto: MessageDto = this.messageMapper.toDto(responseMessage);
-    await this.wsGateway.sendEvent('messageCreated', responseMessageDto, userId);
+    await this.wsGateway.sendEvent(
+      'messageCreated', 
+      this.messageMapper.toDto(responseMessage, { streaming: true }),
+      userId
+    );
 
     chat.lastMessageAt = responseMessage.createdAt;
     let chatDto = this.chatMapper.toChatDto(chat);
@@ -48,8 +51,11 @@ export class AgentProcessService {
       for await (const [type, chunk] of response) {
         if (type === "custom" && chunk instanceof ResultCustomChunk && chunk.type === 'result') {
           responseMessage.text = chunk.text;
-          responseMessageDto = this.messageMapper.toDto(responseMessage);
-          await this.wsGateway.sendEvent('messageUpdated', responseMessageDto, userId);
+          await this.wsGateway.sendEvent(
+            'messageUpdated', 
+            this.messageMapper.toDto(responseMessage, { streaming: true }),
+            userId
+          );
         }
   
         if (type === "updates") {
@@ -57,8 +63,11 @@ export class AgentProcessService {
           if (chunk.resultNode) {
             const result: string = chunk.resultNode.result as string??"";
             responseMessage.text = result;
-            responseMessageDto = this.messageMapper.toDto(responseMessage);
-            await this.wsGateway.sendEvent('messageUpdated', responseMessageDto, userId);
+            await this.wsGateway.sendEvent(
+              'messageUpdated', 
+              this.messageMapper.toDto(responseMessage, { streaming: true }),
+              userId
+            );
           }
   
           if (chunk.documentsNode) {
@@ -79,16 +88,30 @@ export class AgentProcessService {
               }
             }
             responseMessage.documents = documents;
-            responseMessageDto = this.messageMapper.toDto(responseMessage);
-            await this.wsGateway.sendEvent('messageUpdated', responseMessageDto, userId);
+            await this.wsGateway.sendEvent(
+              'messageUpdated', 
+              this.messageMapper.toDto(responseMessage, { streaming: true }),
+              userId
+            );
           }
         }
       }
+      responseMessage = await this.messageRepository.save(responseMessage);
     } catch(error) {
+      responseMessage.error = "Ошибка во время обработки сообщения";
+      responseMessage = await this.messageRepository.save(responseMessage);
+      await this.wsGateway.sendEvent(
+        'messageUpdated', 
+        this.messageMapper.toDto(responseMessage, { streaming: false }),
+        userId
+      );
       throw error;
     } finally {
-      responseMessage.streaming = false;
-      responseMessage = await this.messageRepository.save(responseMessage);
+      await this.wsGateway.sendEvent(
+        'messageUpdated', 
+        this.messageMapper.toDto(responseMessage, { streaming: false }),
+        userId
+      );
     }
   }
 
@@ -98,7 +121,6 @@ export class AgentProcessService {
     message.chat = chat;
     message.role = "assistant";
     message.text = "";
-    message.streaming = true;
     message.documents = [];
     return message;
   }
