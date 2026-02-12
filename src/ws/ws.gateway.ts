@@ -24,20 +24,22 @@ export class WsGateway implements OnGatewayDisconnect {
     }
   }
 
-  @SubscribeMessage("login")
+  @SubscribeMessage("sign-in")
   async login(
     @ConnectedSocket() client: Socket,
-    @MessageBody() body: JwtDto
+    @MessageBody() body: { access: string}
   ) {
 
      try {
-      const jwt = body.jwt;
+      const jwt = body.access;
       if (!jwt) throw new Error("empty token");
       if (!(typeof jwt === "string")) throw new Error("invalid token");
       const token = jwt.split(' ').at(1);
       if (!token) throw new Error("empty token");
-
-      const userId = await this.jwtService.verifyAndRetrieveUserId(token);
+      const { userId } = await this.jwtService.verify({
+        type: "access",
+        token
+      });
       if (!userId) throw new Error("invalid token");
       client.data["userId"] = userId;
       client.join(userId);

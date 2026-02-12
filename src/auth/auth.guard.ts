@@ -15,13 +15,16 @@ export class AuthGuard implements CanActivate {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
-    ])
+    ]);
     if (isPublic) return true;
     const request = context.switchToHttp().getRequest<Request>();
     const token = this.extractTokenFromHeader(request);
     if (!token) throw new AppError("EMPTY_AUTHORIZATION_HEADER");
     try {
-      const userId = await this.jwtService.verifyAndRetrieveUserId(token);
+      const { userId } = await this.jwtService.verify({
+        type: "access",
+        token
+      });
       
       request['userId'] = userId;
       this.logger.log(`userId: ${userId}`);

@@ -8,6 +8,7 @@ export class ContractsTable1768841491498 implements MigrationInterface {
         CREATE TABLE "contracts" (
           "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
           "title" text NOT NULL,
+          "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
           CONSTRAINT "PK_contract_id" PRIMARY KEY ("id")
         );  
       `);

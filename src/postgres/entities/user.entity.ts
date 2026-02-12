@@ -6,14 +6,14 @@ import { Chat } from "./chat.entity"
 export class User {
 
   @PrimaryGeneratedColumn('uuid')
-  id: string
+  id: string;
 
   @Column({ unique: true })
-  username: string
+  username: string;
 
   @Column()
-  password: string
+  password: string;
 
   @OneToMany(() => Chat, chat => chat.user)
-  chats: Chat[]
+  chats: Chat[];
 }

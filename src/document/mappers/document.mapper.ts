@@ -14,17 +14,13 @@ export class DocumentMapper {
     this.host = this.configService.getOrThrow<string>('APP_HOST');
   }
 
-  toDto(args: {
-    document: Document,
-    contract: Contract
-  }) {
-    const { document, contract } = args;
+  toDto(document: Document) {
     return new DocumentDto({
       id: document.id,
       title: document.title,
       contract: {
-        id: contract.id,
-        title: contract.title
+        id: document.contract.id,
+        title: document.contract.title
       },
     });
   }

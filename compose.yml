@@ -8,6 +8,8 @@ services:
     environment:
       - GIGACHAT_API_KEY=${GIGACHAT_API_KEY}
       - JWT_SECRET=${JWT_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - JWT_DOCUMENT_KEY_SECRET=${JWT_DOCUMENT_KEY_SECRET}
       - POSTGRES_HOST=postgres
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - NEO4J_HOST=neo4j
@@ -17,6 +19,7 @@ services:
       - APP_HOST=${APP_HOST}
       - APP_USERS=${APP_USERS}
       - GOTENBERG_HOST=gotenberg
+      
     depends_on:
       postgres:
         condition: service_healthy

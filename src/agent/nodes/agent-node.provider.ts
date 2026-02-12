@@ -68,7 +68,7 @@ Contract -> Document -> Page -> Paragraph -> Fact -> Entity
   data: текст узла,
   type: тип узла (Contract, Document, Paragraph, Fact, Entity),
   name: название узла, кратко описывающий его содержимое
-  }
+}
   
 ###
 Для ответа на вопрос пользователя тебе будут доступны инструменты/функции:

@@ -1,3 +1,4 @@
 export class JwtDto {
-  jwt: string
+  access: string;
+  refresh: string;
 }

@@ -1,4 +1,4 @@
-import { Column, Entity, OneToMany, PrimaryColumn, PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, OneToMany, PrimaryColumn, PrimaryGeneratedColumn } from "typeorm";
 import { Document } from "./document.entity";
 @Entity({ name: 'contracts' })
 export class Contract {
@@ -11,4 +11,7 @@ export class Contract {
 
   @OneToMany(() => Document, document => document.contract)
   documents: Document[];
+
+  @CreateDateColumn({type: 'timestamp', default: () => "CURRENT_TIMESTAMP(6)"})
+  createdAt: Date;
 }

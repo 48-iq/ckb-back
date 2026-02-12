@@ -8,6 +8,7 @@ export class DocumentsTable1768841604912 implements MigrationInterface {
       CREATE TABLE "documents" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
         "title" text NOT NULL,
+        "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         "contractId" uuid NOT NULL,
         CONSTRAINT "PK_documents_id" PRIMARY KEY ("id"),
         CONSTRAINT "UQ_documents_title" UNIQUE ("title"),

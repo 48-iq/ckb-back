@@ -153,7 +153,7 @@ export class ChatService {
 
     try {
       if (chatId) {
-
+        
         chat = await this.chatRepository.findOneBy({ id: chatId });
 
         if (!chat) throw new AppError("CHAT_NOT_FOUND");

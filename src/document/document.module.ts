@@ -12,6 +12,8 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { Contract } from "src/postgres/entities/contract.entity";
 import { Document } from "src/postgres/entities/document.entity";
 import { DocumentEmbedService } from "./services/document-embed.service";
+import { AuthModule } from "src/auth/auth.module";
+import { User } from "src/postgres/entities/user.entity";
 
 
 
@@ -20,7 +22,8 @@ import { DocumentEmbedService } from "./services/document-embed.service";
     EmbeddingModule, 
     Neo4jModule, 
     MinioModule,
-    TypeOrmModule.forFeature([Document, Contract])
+    TypeOrmModule.forFeature([Document, Contract, User]),
+    AuthModule
   ],
   providers: [
     DocumentMapper, 

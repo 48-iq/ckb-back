@@ -27,14 +27,7 @@ export class MessageMapper {
       createdAt: message.createdAt.toISOString(),
       streaming: message.streaming,
       error: message.error,
-      documents: message.documents?.map(
-        doc => this.documentMapper.toDto(
-          { 
-            document: doc, 
-            contract: doc.contract 
-          }
-        )
-      ),
+      documents: message.documents?.map(this.documentMapper.toDto)
     });
     return messageDto; 
   }

@@ -1,4 +1,4 @@
-import { Column, Entity, JoinTable, ManyToMany, ManyToOne, PrimaryGeneratedColumn } from "typeorm"
+import { Column, CreateDateColumn, Entity, ManyToMany, ManyToOne, PrimaryGeneratedColumn } from "typeorm"
 import { Message } from "./message.entity"
 import { Contract } from "./contract.entity";
 
@@ -17,4 +17,8 @@ export class Document {
 
   @ManyToOne(() => Contract, { eager: true })
   contract: Contract;
+
+  @CreateDateColumn({type: 'timestamp', default: () => "CURRENT_TIMESTAMP(6)"})
+  createdAt: Date;
+
 }

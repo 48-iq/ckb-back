@@ -23,7 +23,7 @@ export class MinioRepository implements OnApplicationBootstrap {
       const result = await this.minio.putObject(this.documentsBucketName, filename, buffer, buffer.length);
       return result;
     } catch (e) {
-      throw new AppError("SAVE_FILE_ERROR", e);
+      throw new AppError("SAVE_FILE_ERROR", { });
     }
   }
 
@@ -32,7 +32,7 @@ export class MinioRepository implements OnApplicationBootstrap {
       const result = await this.minio.getObject(this.documentsBucketName, filename);
       return result;
     } catch (e) {
-      throw new AppError("SAVE_FILE_ERROR", e);
+      throw new AppError("SAVE_FILE_ERROR");
     }
   }
 }

@@ -37,6 +37,11 @@ import { WsModule } from './ws/ws.module'
         MINIO_PORT: Joi.number().required(),
 
         JWT_SECRET: Joi.string().required(),
+        JWT_EXPIRATION_TIME: Joi.string().required(),
+        JWT_REFRESH_SECRET: Joi.string().required(),
+        JWT_REFRESH_EXPIRATION_TIME: Joi.string().required(),
+        JWT_DOCUMENT_KEY_SECRET: Joi.string().required(),
+        JWT_DOCUMENT_KEY_EXPIRATION_TIME: Joi.string().required(),
         JWT_ISSUER: Joi.string().required(),
         JWT_AUDIENCE: Joi.string().required(),
         JWT_ALGORITHM: Joi.string().required(),
@@ -71,7 +76,6 @@ import { WsModule } from './ws/ws.module'
           synchronize: false,
           migrations: [__dirname + '/postgres/migrations/**/*{.ts,.js}'],
           migrationsRun: true,
-          
         }
       }
     }),
