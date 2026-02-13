@@ -27,24 +27,13 @@ export class DocumentController {
       documentTitle: newDocumentMeta.documentTitle
     });
   }
-
-  @Post("/generate-key/:documentId")
-  async generateAccessKey(
-    @Req() req: Request,
-    @Param("documentId") documentId: string
-  ) {
-    const userId = req["userId"];
-    const key = await this.documentService.generateDocumentKey({ documentId, userId });
-    return new KeyDto(key);
-  }
   
-  @Public()
-  @Get("/by-key/:key")
+  @Get("/:name")
   async getDocumentByKey(
     @Res() res: Response,
-    @Param("key") key: string
+    @Param("name") name: string
   ) {
-    const result = await this.documentService.getDocumentByKey(key);
+    const result = await this.documentService.getDocument(name);
     result.pipe(res);
   }
 

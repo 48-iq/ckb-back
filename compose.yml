@@ -19,6 +19,7 @@ services:
       - APP_HOST=${APP_HOST}
       - APP_USERS=${APP_USERS}
       - GOTENBERG_HOST=gotenberg
+      - COOKIE_SECRET=${COOKIE_SECRET}
       
     depends_on:
       postgres:

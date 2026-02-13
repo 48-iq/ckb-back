@@ -18,12 +18,13 @@ export class AuthGuard implements CanActivate {
     ]);
     if (isPublic) return true;
     const request = context.switchToHttp().getRequest<Request>();
-    const token = this.extractTokenFromHeader(request);
-    if (!token) throw new AppError("EMPTY_AUTHORIZATION_HEADER");
+    const access = this.extractTokenFromCookie(request);
+    if (!access) throw new AppError("EMPTY_AUTHORIZATION_HEADER");
     try {
+      this.logger.log(`access: ${access}`);
       const { userId } = await this.jwtService.verify({
         type: "access",
-        token
+        token: access
       });
       
       request['userId'] = userId;
@@ -34,10 +35,9 @@ export class AuthGuard implements CanActivate {
     }
   }
 
-  private extractTokenFromHeader(request: Request): string | undefined {
-    const [type, token] = request.headers.authorization?.split(' ') ?? [];
-    if (type !== 'Bearer') return ;
-    return type === 'Bearer' ? token : undefined;
+  private extractTokenFromCookie(request: Request): string | undefined {
+    const token = request.signedCookies["access"];
+    return token;
   }
   
 }

@@ -153,10 +153,7 @@ export class ChatService {
 
     try {
       if (chatId) {
-<<<<<<< HEAD
         
-=======
->>>>>>> 3d1c5bf68c0862d3124d7f08dc16297397c393e3
         chat = await this.chatRepository.findOneBy({ id: chatId });
 
 

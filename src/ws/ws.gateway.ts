@@ -4,6 +4,7 @@ import { Server, Socket } from "socket.io";
 import { EventType } from "./event-type.type";
 import { JwtService } from "src/auth/services/jwt.service";
 import { JwtDto } from "src/auth/dto/jwt.dto";
+import { AppError } from "src/shared/errors/app.error";
 
 @WebSocketGateway()
 export class WsGateway implements OnGatewayDisconnect {
@@ -25,28 +26,26 @@ export class WsGateway implements OnGatewayDisconnect {
   }
 
   @SubscribeMessage("sign-in")
-  async login(
+  async signIn(
     @ConnectedSocket() client: Socket,
     @MessageBody() body: { access: string}
   ) {
 
      try {
-      const jwt = body.access;
-      if (!jwt) throw new Error("empty token");
-      if (!(typeof jwt === "string")) throw new Error("invalid token");
-      const token = jwt.split(' ').at(1);
-      if (!token) throw new Error("empty token");
+      const access = body.access;
+      if (!access) throw new AppError("INCORRECT_JWT");
+      if (!(typeof access === "string")) throw new AppError("INCORRECT_JWT");
+      this.logger.log(`ws client try sign-in: ${access}`);
       const { userId } = await this.jwtService.verify({
         type: "access",
-        token
+        token: access
       });
-      if (!userId) throw new Error("invalid token");
+      if (!userId) throw new AppError("INCORRECT_JWT");
       client.data["userId"] = userId;
       client.join(userId);
       this.logger.log(`ws client logged in: ${userId}`);
     } catch(e) {
       this.logger.log("client connection error", e.message);
-      client.disconnect();
     }
   }
 

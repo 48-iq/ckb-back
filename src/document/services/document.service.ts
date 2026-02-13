@@ -98,40 +98,20 @@ export class DocumentService {
     return documents.map(this.documentMapper.toDto);
   }
 
-  async getDocumentByKey(key) {
-    let documentId: string;
-    let userId: string;
+  async getDocument(documentName: string) {
     try {
-      const keyPayload = await this.jwtService.verify({
-        type: "document",
-        token: key
-      });
-      this.logger.log(JSON.stringify(keyPayload));
-      documentId = keyPayload.documentId;
-      userId = keyPayload.userId;
-    } catch (e) {
-      throw new AppError("INCORRECT_JWT");
-    }
-    if (!(await this.userRepository.existsBy({ id: userId })))
-      throw new AppError("USER_NOT_FOUND");
-    try {
-      const document = await this.minioRepository.getDocument(`${documentId}.pdf`);
+      const documentId = documentName.replace('.pdf', '');
+
+      if (!documentName.endsWith('.pdf')) throw new AppError("DOCUMENT_NOT_FOUND");
+      if (!documentId) throw new AppError("DOCUMENT_NOT_FOUND");
+
+      const document = await this.minioRepository.getDocument(documentName);
       return document;
     } catch (e) {
+      this.logger.error(e);
+      if (e instanceof AppError) throw e;
       throw new AppError("DOCUMENT_NOT_FOUND");
     }
   }
-
-  async generateDocumentKey(args: {
-    documentId: string,
-    userId: string
-  }) {
-    const key = await this.jwtService.generate({
-      type: "document",
-      payload: { documentId: args.documentId, userId: args.userId }
-    });
-    return key;
-  }
-
   
 }
