@@ -14,6 +14,8 @@ import { DocumentMapper } from "../mappers/document.mapper";
 import { JwtService } from "src/auth/services/jwt.service";
 import { AppError } from "src/shared/errors/app.error";
 import { User } from "src/postgres/entities/user.entity";
+import { CursorMapper } from "src/shared/mappers/cursor.mapper";
+import { WsGateway } from "src/ws/ws.gateway";
 
 @Injectable()
 export class DocumentService {
@@ -34,14 +36,17 @@ export class DocumentService {
     private readonly documentEmbedService: DocumentEmbedService,
     private readonly documentMapper: DocumentMapper,
     private readonly jwtService: JwtService,
+    private readonly cursorMapper: CursorMapper,
+    private readonly wsGateway: WsGateway
   ) {}
 
   async saveDocument(args: {
     file: Express.Multer.File,
     contractTitle: string,
-    documentTitle: string
+    documentTitle: string,
+    userId: string
   }) {
-    const { file, contractTitle, documentTitle } = args;
+    const { file, contractTitle, documentTitle, userId } = args;
     let contract = await this.contractRepository.findOneBy({ title: contractTitle });
 
     await this.dataSource.manager.transaction(async (transactionalEntityManager) => {
@@ -71,13 +76,17 @@ export class DocumentService {
         name: document.title,
         pages
       });
-
       const neo4jDocument = await this.documentEmbedService.embedDocument(ProcessedDocument);
-
+      
       await this.neo4jRepository.saveDocument(neo4jDocument);
 
       this.minioRepository.saveDocument(pdfBuffer, `${document.id}.pdf`);
       console.log('document saved');
+      this.wsGateway.sendEvent(
+        'documentCreated',
+        this.documentMapper.toDto(document),
+        userId
+      )
     });
   }
 
@@ -94,14 +103,23 @@ export class DocumentService {
       .orderBy('document.createdAt', 'DESC')
       .limit(args.limit)
       .getMany();
-    
-    return documents.map(this.documentMapper.toDto);
+    const totalCount = await this.documentRepository
+      .createQueryBuilder('document') 
+      .leftJoinAndSelect('document.contract', 'contract')
+      .where('document.createdAt < :before', { before: new Date(args.before) })
+      .andWhere('document.title LIKE :query OR contract.title LIKE :query', { query: `%${args.query??''}%` })
+      .orderBy('document.createdAt', 'DESC')
+      .getCount();
+    const itemsLeft = (totalCount - args.limit) < 0 ? 0 : totalCount - args.limit;
+
+    return this.cursorMapper.toDto({ itemsLeft, data: documents, dataMapper: this.documentMapper.toDto });
   }
 
   async getDocument(documentName: string) {
     try {
       const documentId = documentName.replace('.pdf', '');
 
+      this.logger.log(`try to get document: ${documentId}, from name: ${documentName}`);
       if (!documentName.endsWith('.pdf')) throw new AppError("DOCUMENT_NOT_FOUND");
       if (!documentId) throw new AppError("DOCUMENT_NOT_FOUND");
 

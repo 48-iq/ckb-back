@@ -35,7 +35,6 @@ export class WsGateway implements OnGatewayDisconnect {
       const access = body.access;
       if (!access) throw new AppError("INCORRECT_JWT");
       if (!(typeof access === "string")) throw new AppError("INCORRECT_JWT");
-      this.logger.log(`ws client try sign-in: ${access}`);
       const { userId } = await this.jwtService.verify({
         type: "access",
         token: access

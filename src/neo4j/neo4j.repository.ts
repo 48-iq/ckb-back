@@ -80,7 +80,8 @@ export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBoot
       data: args.data,
       name: args.name,
       embedding: args.embedding,
-      type: args.type
+      type: args.type,
+      postgresId: args.postgresId
     });
     if (args.parentNodeId) {
       await this._createRelation(
@@ -113,6 +114,7 @@ export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBoot
           name: newDocument.name,
           data: newDocument.name,
           embedding: newDocument.nameEmbedding,
+          postgresId: newDocument.postgresId,
           type: "Document",
           parentNodeId: savedContract.id
         });

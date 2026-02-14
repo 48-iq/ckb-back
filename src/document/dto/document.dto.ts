@@ -6,6 +6,7 @@ export class DocumentDto {
     id: string;
     title: string;
   }
+  createdAt: string;
 
   constructor(partial?: Partial<DocumentDto>) {
     if (partial)

@@ -14,6 +14,7 @@ import { Document } from "src/postgres/entities/document.entity";
 import { DocumentEmbedService } from "./services/document-embed.service";
 import { AuthModule } from "src/auth/auth.module";
 import { User } from "src/postgres/entities/user.entity";
+import { WsModule } from "src/ws/ws.module";
 
 
 
@@ -23,6 +24,7 @@ import { User } from "src/postgres/entities/user.entity";
     Neo4jModule, 
     MinioModule,
     TypeOrmModule.forFeature([Document, Contract, User]),
+    WsModule,
     AuthModule
   ],
   providers: [

@@ -7,14 +7,15 @@ import { ChatMapper } from "../mappers/chat.mapper";
 import { ResultCustomChunk } from "../chunks/result.custom.chunk";
 import { Neo4jRepository } from "src/neo4j/neo4j.repository";
 import { Document } from "src/postgres/entities/document.entity";
-import { MessageDto } from "../dto/message.dto";
 import { MessageMapper } from "../mappers/message.mapper";
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 
 
 @Injectable()
 export class AgentProcessService {
+
+  private readonly logger = new Logger(AgentProcessService.name);
 
   constructor(
     @InjectRepository(Message) private readonly messageRepository: Repository<Message>,
@@ -69,9 +70,10 @@ export class AgentProcessService {
               userId
             );
           }
-  
-          if (chunk.documentsNode) {
-            const documentsNeo4jIds: number[] = chunk.documentsNode.documents as number[]??[];
+          if (chunk.documentNode) {
+            this.logger.log("in chunk documentsNode");
+            const documentsNeo4jIds: number[] = chunk.documentNode.documents as number[]??[];
+            this.logger.log(`documentsNeo4jIds: ${JSON.stringify(documentsNeo4jIds)}, length: ${documentsNeo4jIds.length}`);
             const documentsPostgresIds: string[] = [];
             for (const neo4jId of documentsNeo4jIds) {
               const postgresId = await this.neo4jRepository.getDocumentPostgresId(neo4jId);

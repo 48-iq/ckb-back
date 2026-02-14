@@ -19,17 +19,20 @@ export class DocumentController {
   @UseInterceptors(FileInterceptor('file'))
   async saveDocument(
     @UploadedFile() file: Express.Multer.File,
-    @Body() newDocumentMeta: NewDocumentDto
+    @Body() newDocumentMeta: NewDocumentDto,
+    @Req() req: Request
   ) {
+    const userId = req["userId"];
     await this.documentService.saveDocument({ 
       file,
       contractTitle: newDocumentMeta.contractTitle,
-      documentTitle: newDocumentMeta.documentTitle
+      documentTitle: newDocumentMeta.documentTitle,
+      userId
     });
   }
   
   @Get("/:name")
-  async getDocumentByKey(
+  async getDocument(
     @Res() res: Response,
     @Param("name") name: string
   ) {

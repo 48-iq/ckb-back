@@ -21,14 +21,12 @@ export class AuthGuard implements CanActivate {
     const access = this.extractTokenFromCookie(request);
     if (!access) throw new AppError("EMPTY_AUTHORIZATION_HEADER");
     try {
-      this.logger.log(`access: ${access}`);
       const { userId } = await this.jwtService.verify({
         type: "access",
         token: access
       });
       
       request['userId'] = userId;
-      this.logger.log(`userId: ${userId}`);
       return true;  
     } catch (e) {
       throw new AppError("INCORRECT_JWT");
