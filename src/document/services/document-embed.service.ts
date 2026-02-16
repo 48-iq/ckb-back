@@ -64,7 +64,7 @@ export class DocumentEmbedService {
     return {
       name: paragraph.name,
       text: paragraph.text,
-      textEmbedding,
+      embedding: textEmbedding,
       facts
     };
   }
@@ -88,7 +88,7 @@ export class DocumentEmbedService {
     const nameEmbedding = await this.embeddingService.getEmbedding(entity.name);
     return {
       name: entity.name,
-      nameEmbedding
+      embedding: nameEmbedding
     }
   }
 }

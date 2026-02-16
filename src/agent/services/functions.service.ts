@@ -1,6 +1,6 @@
 import { Injectable, Provider } from "@nestjs/common";
 import { EmbeddingService } from "src/embedding/embedding.service";
-import { Neo4jRepository } from "src/neo4j/neo4j.repository";
+import { Neo4jRepository } from "src/neo4j/repositories/node.repository";
 import { Function as GigachatFunction } from "gigachat/interfaces";
 import { ConfigService } from "@nestjs/config";
 import { NodeNotFoundError } from "src/neo4j/node-not-found.error";

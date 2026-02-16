@@ -5,7 +5,7 @@ import { WsGateway } from "src/ws/ws.gateway";
 import { Repository } from "typeorm";
 import { ChatMapper } from "../mappers/chat.mapper";
 import { ResultCustomChunk } from "../chunks/result.custom.chunk";
-import { Neo4jRepository } from "src/neo4j/neo4j.repository";
+import { Neo4jRepository } from "src/neo4j/repositories/node.repository";
 import { Document } from "src/postgres/entities/document.entity";
 import { MessageMapper } from "../mappers/message.mapper";
 import { Injectable, Logger } from "@nestjs/common";

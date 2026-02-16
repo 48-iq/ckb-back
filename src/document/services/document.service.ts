@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Neo4jRepository } from "src/neo4j/neo4j.repository";
+import { Neo4jRepository } from "src/neo4j/repositories/node.repository";
 import { Contract } from "src/postgres/entities/contract.entity";
 import { DataSource, Repository } from "typeorm";
 import { Document } from "src/postgres/entities/document.entity";

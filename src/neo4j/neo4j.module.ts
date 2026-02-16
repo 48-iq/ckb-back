@@ -1,7 +1,7 @@
 import { Global, Module } from "@nestjs/common"
 import { ConfigModule } from "@nestjs/config"
 import { Neo4jDriverProvider } from "./neo4j-driver.provider"
-import { Neo4jRepository } from "./neo4j.repository"
+import { Neo4jRepository } from "./repositories/node.repository"
 
 
 @Global()
