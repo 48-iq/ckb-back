@@ -54,7 +54,7 @@ export class ChatController {
     @Body() body: NewMessageDto
   ) {
     const userId = req["userId"];
-    await this.chatService.sendMessage({ userId, chatId, text: body.text});
+    this.chatService.sendMessage({ userId, chatId, text: body.text});
   }
 
   @Post()
@@ -63,7 +63,7 @@ export class ChatController {
     @Body() body: NewMessageDto
   ) {
     const userId = req["userId"];
-    await this.chatService.sendMessage({ userId, text: body.text });
+    this.chatService.sendMessage({ userId, text: body.text });
   }
   
 }

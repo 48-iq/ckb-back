@@ -22,7 +22,8 @@ export class DocumentMapper {
         id: document.contract.id,
         title: document.contract.title
       },
-      createdAt: document.createdAt.toISOString()
+      createdAt: document.createdAt.toISOString(),
+      status: document.status
     });
   }
 }

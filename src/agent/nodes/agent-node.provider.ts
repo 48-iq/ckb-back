@@ -38,7 +38,6 @@ export const AgentNodeProvider: Provider = {
       const newTotalSteps = totalSteps + 1;
 
       logger.log(`step ${newTotalSteps}: ${JSON.stringify(message)}`);
-      
 
       return { messages: [...messages, message], totalTokens: newTotalTokens, totalSteps: newTotalSteps };
     }

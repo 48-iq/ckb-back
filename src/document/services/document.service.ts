@@ -16,6 +16,8 @@ import { AppError } from "src/shared/errors/app.error";
 import { User } from "src/postgres/entities/user.entity";
 import { CursorMapper } from "src/shared/mappers/cursor.mapper";
 import { WsGateway } from "src/ws/ws.gateway";
+import Stream from "node:stream";
+import { Cron, CronExpression } from "@nestjs/schedule";
 
 @Injectable()
 export class DocumentService {
@@ -25,8 +27,6 @@ export class DocumentService {
   constructor(
     @InjectRepository(Document) private readonly documentRepository: Repository<Document>, 
     @InjectRepository(Contract) private readonly contractRepository: Repository<Contract>,
-    @InjectRepository(User) private readonly userRepository: Repository<User>,
-    private readonly configService: ConfigService,
     private readonly neo4jRepository: Neo4jRepository,
     private readonly documentConvertService: DocumentConvertService,
     private readonly minioRepository: MinioRepository,
@@ -35,7 +35,6 @@ export class DocumentService {
     private readonly dataSource: DataSource,
     private readonly documentEmbedService: DocumentEmbedService,
     private readonly documentMapper: DocumentMapper,
-    private readonly jwtService: JwtService,
     private readonly cursorMapper: CursorMapper,
     private readonly wsGateway: WsGateway
   ) {}
@@ -47,48 +46,162 @@ export class DocumentService {
     userId: string
   }) {
     const { file, contractTitle, documentTitle, userId } = args;
+
     let contract = await this.contractRepository.findOneBy({ title: contractTitle });
 
-    await this.dataSource.manager.transaction(async (transactionalEntityManager) => {
-      if (!contract) {
-        contract = new Contract();
-        contract.title = args.contractTitle;
-        contract = await transactionalEntityManager.save(contract);
-      }
-      this.logger.log(JSON.stringify(contract));
+    const filetype = file.originalname.endsWith('.doc')? '.doc':
+      file.originalname.endsWith('.docx')? '.docx':
+      file.originalname.endsWith('.pdf')? '.pdf':
+      undefined;
 
-      let document = new Document();
-      document.contract = contract;
-      document.title = documentTitle;
-      document = await transactionalEntityManager.save(document);      
-      const filename = file.originalname??file.filename;
-      this.logger.log(filename);
-      let pdfBuffer = file.buffer;
-      if (!filename.endsWith('.pdf')) {
-        pdfBuffer = await this.documentConvertService.fileToPdf(file.buffer, filename);
+    if (!filetype) throw new AppError("INCORRECT_DOCUMENT_FORMAT");
+
+    const isExists = await this.documentRepository  
+      .createQueryBuilder('document')
+      .select('document')
+      .where('document.title = :title', { title: documentTitle })
+      .andWhere('document.status != :status', { status: 'error' })
+      .getExists()
+
+    if (isExists) {
+      throw new AppError("DOCUMENT_ALREADY_EXISTS");
+    }
+
+    if (!contract) {
+      contract = new Contract();
+      contract.title = args.contractTitle;
+      contract = await this.contractRepository.save(contract);
+    }
+
+    let document = new Document();
+
+    document.contract = contract;
+    document.title = documentTitle;
+    document.status = "awaiting";
+    document.initialType = filetype;
+    document = await this.documentRepository.save(document); 
+
+    try {
+      await this.minioRepository.saveUnprocessedDocument(file.buffer, document.id);
+  
+      this.wsGateway.sendEventToAll(
+        "documentCreated", 
+        this.documentMapper.toDto(document),
+      );
+    } catch(e) {
+      this.logger.error(e);
+      document.status = 'error';
+      await this.documentRepository.save(document);
+      
+      this.wsGateway.sendEventToAll(
+        'documentUpdated',
+        this.documentMapper.toDto(document),
+      )
+    }
+
+  }
+
+  @Cron(CronExpression.EVERY_10_SECONDS)
+  async processDocument() {
+    const document = await this.documentRepository
+      .createQueryBuilder('document')
+      .select('document')
+      .leftJoinAndSelect('document.contract', 'contract')
+      .where('document.status = :status', { status: 'awaiting' })
+      .orderBy('document.createdAt', 'ASC')
+      .getOne();
+
+    if (!document) return;
+    try {
+      document.status = 'parsing';
+  
+      await this.documentRepository.save(document);
+  
+      this.wsGateway.sendEventToAll(
+        'documentUpdated',
+        this.documentMapper.toDto(document),
+      )
+  
+      const initialFileStream = await this.minioRepository.getUnprocessedDocument(document.id);
+      const initialFileBuffer = await this.streamToBuffer(initialFileStream);
+  
+      let pdfBuffer = initialFileBuffer;
+      
+      if (document.initialType !== '.pdf') {
+        pdfBuffer = await this.documentConvertService.fileToPdf(
+          initialFileBuffer, 
+          `${document.id}${document.initialType}`
+        );
       }
+  
+      document.status = 'processing';
+  
+      await this.documentRepository.save(document);
+  
+      this.wsGateway.sendEventToAll(
+        'documentUpdated',
+        this.documentMapper.toDto(document),
+      )
       
       const pages = await this.documentSplitService.splitToPages(pdfBuffer);
       
       const ProcessedDocument = await this.documentProcessService.processDocument({
-        contract: { name: contract.title },
+        contract: { name: document.contract.title },
         postgresId: document.id,
         name: document.title,
         pages
       });
+  
+      document.status = 'embedding';
+  
+      await this.documentRepository.save(document);
+  
+      this.wsGateway.sendEventToAll(
+        'documentUpdated',
+        this.documentMapper.toDto(document),
+      );
+  
       const neo4jDocument = await this.documentEmbedService.embedDocument(ProcessedDocument);
+  
+      document.status = 'saving';
+  
+      await this.documentRepository.save(document);
+  
+      this.wsGateway.sendEventToAll(
+        'documentUpdated',
+        this.documentMapper.toDto(document),
+      );
       
       await this.neo4jRepository.saveDocument(neo4jDocument);
-
+  
       this.minioRepository.saveDocument(pdfBuffer, `${document.id}.pdf`);
-      console.log('document saved');
-      this.wsGateway.sendEvent(
-        'documentCreated',
+  
+      document.status = 'ready';
+  
+      await this.documentRepository.save(document);
+  
+      this.wsGateway.sendEventToAll(
+        'documentUpdated',
         this.documentMapper.toDto(document),
-        userId
-      )
-    });
+      );    
+    } catch(e) {
+      this.logger.error(e);
+      document.status = 'error';
+      await this.documentRepository.save(document);
+      this.wsGateway.sendEventToAll(
+        'documentUpdated',
+        this.documentMapper.toDto(document),
+      );
+    }
   }
+
+  private async streamToBuffer(stream: Stream.Readable): Promise<Buffer> {
+  const chunks: any = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
 
   async getDocuments(args: {
     limit: number,

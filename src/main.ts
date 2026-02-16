@@ -8,14 +8,27 @@ import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
   const configService = app.get(ConfigService);
+
   const authGuard = app.get(AuthGuard);
+
   const socketIoAdapter = new SocketIoAdapter(app, configService);
+
   const cookieSecret = configService.getOrThrow<string>('COOKIE_SECRET');
+
+  const isSsl = configService.getOrThrow<string>('USE_SSL') === "true";
+  const port = isSsl ? 443 : 80;
+  const host = configService.getOrThrow<string>('APP_HOST');
+
+  const originStart = isSsl ? "https://" : "http://";
+  const origin = `${originStart}${host}:${port}`;
+
   app.useWebSocketAdapter(socketIoAdapter);
   app.use(cookieParser(cookieSecret));
+
   app.enableCors({
-    "origin": configService.getOrThrow<string>('APP_HOST'),
+    "origin": origin,
     "methods": "GET,HEAD,PUT,PATCH,POST,DELETE",
     "preflightContinue": false,
     "credentials": true,

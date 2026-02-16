@@ -17,8 +17,15 @@ export class SocketIoAdapter extends IoAdapter {
 
   createIOServer(port: number, options?: ServerOptions) {
     const corsOrigin = this.configService.get<string>('APP_HOST');
+    const isSsl = this.configService.getOrThrow<string>('USE_SSL') === "true";
+    const originPort = isSsl ? 443 : 80;
+    const host = this.configService.getOrThrow<string>('APP_HOST');
+
+    const originStart = isSsl ? "https://" : "http://";
+    const origin = `${originStart}${host}:${originPort}`;
+
     const cors = {
-      origin: corsOrigin,
+      origin: origin,
       methods: ['GET', 'POST'],
       credentials: true,
     };

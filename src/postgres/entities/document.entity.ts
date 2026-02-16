@@ -18,7 +18,15 @@ export class Document {
   @ManyToOne(() => Contract, { eager: true })
   contract: Contract;
 
+  @Column()
+  status: DocumentStatus;
+
+  @Column()
+  initialType: ".pdf" | ".docx" | ".doc";
+
   @CreateDateColumn({type: 'timestamp', default: () => "CURRENT_TIMESTAMP(6)"})
   createdAt: Date;
 
 }
+
+export type DocumentStatus = "awaiting" | "parsing" | "processing" | "embedding" | "saving" | "ready" | "error";

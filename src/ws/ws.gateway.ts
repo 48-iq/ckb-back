@@ -3,7 +3,6 @@ import { ConnectedSocket, MessageBody, OnGatewayConnection, OnGatewayDisconnect,
 import { Server, Socket } from "socket.io";
 import { EventType } from "./event-type.type";
 import { JwtService } from "src/auth/services/jwt.service";
-import { JwtDto } from "src/auth/dto/jwt.dto";
 import { AppError } from "src/shared/errors/app.error";
 
 @WebSocketGateway()
@@ -35,10 +34,7 @@ export class WsGateway implements OnGatewayDisconnect {
       const access = body.access;
       if (!access) throw new AppError("INCORRECT_JWT");
       if (!(typeof access === "string")) throw new AppError("INCORRECT_JWT");
-      const { userId } = await this.jwtService.verify({
-        type: "access",
-        token: access
-      });
+      const { userId } = await this.jwtService.verify(access);
       if (!userId) throw new AppError("INCORRECT_JWT");
       client.data["userId"] = userId;
       client.join(userId);
@@ -61,8 +57,12 @@ export class WsGateway implements OnGatewayDisconnect {
 
   @WebSocketServer() server: Server;
 
-  async sendEvent(event: EventType, payload: any, userId: string) {
-    await this.server.to(userId).emit(event, payload);
+  sendEvent(event: EventType, payload: any, userId: string) {
+    this.server.to(userId).emit(event, payload);
+  }
+
+  sendEventToAll(event: EventType, payload: any) {
+    this.server.emit(event, payload);
   }
   
 
