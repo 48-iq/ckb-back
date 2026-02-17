@@ -1,10 +1,10 @@
 import { Injectable } from "@nestjs/common";
 import { EmbeddingService } from "src/embedding/embedding.service";
-import { ProcessedDocument } from "../entities/processed-document.entity";
-import { ProcessedPage } from "../entities/processed-page.entity";
-import { ProcessedParagraph } from "../entities/processed-paragraph.entity";
-import { ProcessedFact } from "../entities/processed-fact.entity";
-import { ProcessedEntity } from "../entities/processed-entity.entity";
+import { ProcessedDocument } from "../types/processed-document.entity";
+import { ProcessedPage } from "../types/processed-page.entity";
+import { ProcessedParagraph } from "../types/processed-paragraph.entity";
+import { ProcessedFact } from "../types/processed-fact.entity";
+import { ProcessedEntity } from "../types/processed-entity.entity";
 import { Neo4jEntity } from "src/neo4j/entities/neo4j-entity.entity";
 import { Neo4jFact } from "src/neo4j/entities/neo4j-fact.entity";
 import { Neo4jParagraph } from "src/neo4j/entities/neo4j-paragraph.entity";

@@ -1,6 +1,6 @@
 import { Injectable, Provider } from "@nestjs/common";
 import { EmbeddingService } from "src/embedding/embedding.service";
-import { Neo4jRepository } from "src/neo4j/repositories/node.repository";
+import { GraphInsertService } from "src/document/services/graph-insert.service";
 import { Function as GigachatFunction } from "gigachat/interfaces";
 import { ConfigService } from "@nestjs/config";
 import { NodeNotFoundError } from "src/neo4j/node-not-found.error";
@@ -12,7 +12,7 @@ export class FunctionsService {
   private readonly ENDING = "...(Данные сокращены, используй full_node_by_id для получения полных данных)";
   private readonly maxNodeDataLength: number;
   constructor(
-    private readonly neo4jRepository: Neo4jRepository, 
+    private readonly neo4jRepository: GraphInsertService, 
     private readonly embeddingService: EmbeddingService,
     private readonly configService: ConfigService
   ) {

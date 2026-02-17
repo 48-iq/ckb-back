@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { InjectNeo4j } from "../neo4j.decorator";
 import { Driver, Integer } from "neo4j-driver";
-import { NodeType } from "../new-node.type";
+import { NodeType } from "../../document/types/new-node.type";
 
 
 @Injectable()
@@ -97,19 +97,11 @@ export class FunctionsRepository {
           SKIP $skip
           LIMIT 10
 
-          OPTIONAL MATCH (d:Document)-[:HAS*1..5]->(n)
-
-          WITH
-            n,
-            score,
-            collect(DISTINCT {id: d.id, name: d.name}) AS documents
-
           RETURN
             n.id   AS id,
-            n.data AS data,
             n.type AS type,
             n.name AS name,
-            documents AS documents
+            n.score as score
         `, {queryVector: embedding, skip: int((page - 1) * 10)});
         return result.records.map(r => {return {
           id: r.get("id").low,

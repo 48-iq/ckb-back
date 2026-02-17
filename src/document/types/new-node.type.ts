@@ -10,7 +10,6 @@ export type NewNode =  {
 
 export type NodeType = "Contract" 
 | "Document" 
-| "Page" 
 | "Paragraph" 
 | "Fact" 
 | "Entity";

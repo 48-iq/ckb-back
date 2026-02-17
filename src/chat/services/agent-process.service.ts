@@ -5,7 +5,7 @@ import { WsGateway } from "src/ws/ws.gateway";
 import { Repository } from "typeorm";
 import { ChatMapper } from "../mappers/chat.mapper";
 import { ResultCustomChunk } from "../chunks/result.custom.chunk";
-import { Neo4jRepository } from "src/neo4j/repositories/node.repository";
+import { GraphInsertService } from "src/document/services/graph-insert.service";
 import { Document } from "src/postgres/entities/document.entity";
 import { MessageMapper } from "../mappers/message.mapper";
 import { Injectable, Logger } from "@nestjs/common";
@@ -23,7 +23,7 @@ export class AgentProcessService {
     private readonly agentService: AgentService,
     private readonly wsGateway: WsGateway,
     private readonly messageMapper: MessageMapper,
-    private readonly neo4jRepository: Neo4jRepository,
+    private readonly neo4jRepository: GraphInsertService,
     private readonly chatMapper: ChatMapper
   ) {}
 

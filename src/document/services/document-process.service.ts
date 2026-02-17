@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { ProcessedPage } from "../entities/processed-page.entity";
+import { ProcessedPage } from "../types/processed-page.entity";
 import { InjectGigachat } from "src/gigachat/gigachat.decorator";
 import GigaChat from "gigachat";
 import z from "zod";
@@ -7,7 +7,7 @@ import { ConfigService } from "@nestjs/config";
 import { AppError } from "src/shared/errors/app.error";
 import { EmbeddingService } from "src/embedding/embedding.service";
 import { Neo4jEntity } from "src/neo4j/entities/neo4j-entity.entity";
-import { ProcessedDocument } from "../entities/processed-document.entity";
+import { ProcessedDocument } from "../types/processed-document.entity";
 import { Message } from "gigachat/interfaces";
 
 

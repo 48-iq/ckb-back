@@ -1,10 +1,10 @@
 import { Injectable, OnApplicationBootstrap, OnApplicationShutdown } from "@nestjs/common";
 import { Driver, Integer, Transaction } from "neo4j-driver";
-import { NewNode, type NodeType } from "../new-node.type";
-import { InjectNeo4j } from "../neo4j.decorator";
+import { NewNode, type NodeType } from "../types/new-node.type";
+import { InjectNeo4j } from "../../neo4j/neo4j.decorator";
 
 @Injectable()
-export class Neo4jRepository implements OnApplicationShutdown, OnApplicationBootstrap {
+export class GraphInsertService implements OnApplicationShutdown, OnApplicationBootstrap {
   constructor(
     @InjectNeo4j() private readonly driver: Driver
   ) {}

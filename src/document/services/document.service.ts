@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Neo4jRepository } from "src/neo4j/repositories/node.repository";
+import { GraphInsertService } from "src/document/services/graph-insert.service";
 import { Contract } from "src/postgres/entities/contract.entity";
 import { DataSource, Repository } from "typeorm";
 import { Document } from "src/postgres/entities/document.entity";
@@ -27,7 +27,7 @@ export class DocumentService {
   constructor(
     @InjectRepository(Document) private readonly documentRepository: Repository<Document>, 
     @InjectRepository(Contract) private readonly contractRepository: Repository<Contract>,
-    private readonly neo4jRepository: Neo4jRepository,
+    private readonly neo4jRepository: GraphInsertService,
     private readonly documentConvertService: DocumentConvertService,
     private readonly minioRepository: MinioRepository,
     private readonly documentProcessService: DocumentProcessService,
