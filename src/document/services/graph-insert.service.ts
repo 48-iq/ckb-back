@@ -1,5 +1,5 @@
 import { Injectable, OnApplicationBootstrap, OnApplicationShutdown } from "@nestjs/common";
-import { Driver, Integer, Transaction } from "neo4j-driver";
+import { Driver, Transaction } from "neo4j-driver";
 import { NewNode, type NodeType } from "../types/new-node.type";
 import { InjectNeo4j } from "../../neo4j/neo4j.decorator";
 
@@ -30,8 +30,8 @@ export class GraphInsertService implements OnApplicationShutdown, OnApplicationB
   }
 
   private async createRelation(tx: Transaction, 
-    nodeId: number, 
-    parentNodeId: number
+    nodeId: string, 
+    parentNodeId: string
   ) {
     await tx.run(`
       MATCH (p {id: $parentNodeId})
@@ -42,40 +42,36 @@ export class GraphInsertService implements OnApplicationShutdown, OnApplicationB
 
   private async saveNode(args: {
     tx: Transaction,  
-    node:  NewNode,
-    parentNodeId?: number
+    node:  NewNode
   }) {
-    const { tx, node, parentNodeId } = args;
+    const { tx, node } = args;
     let additionalFields = "";
-    for (const [key, value] of Object.entries(node)) {
+    for (const key of Object.keys(node)) {
       if (
         key !== "id" &&
         key !== "data" &&
         key !== "name" &&
-        key !== "embedding" &&
-        key !== "semanticType"
+        key !== "embedding"
       ) {
         if (additionalFields.length > 0) additionalFields += `\n`;
-        additionalFields += `SET n.${key} = ${value}`;
+        additionalFields += `SET n.${key} = $${key}`;
       }
     }
-    const result = await tx.run<{id: Integer, data: string, type: NodeType, name: string}>(`
-      MATCH (s:Sequence {name: 'global'})
+    const result = await tx.run<{id: string, data: string, type: NodeType, name: string}>(`
       MERGE (n:${node.type} {data: $data, type: $type})
       ON CREATE SET 
         n.id = $id,
         n:Embeddable
       SET n.embedding = $embedding
       SET n.name = $name
-      SET n.semantic_type = $semanticType
       ${additionalFields}
       RETURN n.id as id
     `, { ...args.node });
-    if (parentNodeId) {
+    if (node.parentId) {
       await this.createRelation(
         tx, 
-        result.records.map(r => r.get("id").low)[0], 
-        parentNodeId
+        result.records.map(r => r.get("id"))[0], 
+        node.parentId
       );
     };
     return result.records.map(r => {r.get("id").low})[0];
@@ -84,7 +80,6 @@ export class GraphInsertService implements OnApplicationShutdown, OnApplicationB
   async saveDocument(nodes: {
     contract: NewNode,
     document: NewNode,
-    pages: NewNode[],
     paragraphs: NewNode[],
     facts: NewNode[],
     entities: NewNode[]
@@ -95,9 +90,6 @@ export class GraphInsertService implements OnApplicationShutdown, OnApplicationB
       try {
         await this.saveNode({ tx, node: nodes.contract });
         await this.saveNode({ tx, node: nodes.document });
-        for (const page of nodes.pages) {
-          await this.saveNode({ tx, node: page});
-        }
         for (const paragraph of nodes.paragraphs) {
           await this.saveNode({ tx, node: paragraph});
         }

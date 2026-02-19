@@ -5,10 +5,6 @@ import { ProcessedPage } from "../types/processed-page.entity";
 import { ProcessedParagraph } from "../types/processed-paragraph.entity";
 import { ProcessedFact } from "../types/processed-fact.entity";
 import { ProcessedEntity } from "../types/processed-entity.entity";
-import { Neo4jEntity } from "src/neo4j/entities/neo4j-entity.entity";
-import { Neo4jFact } from "src/neo4j/entities/neo4j-fact.entity";
-import { Neo4jParagraph } from "src/neo4j/entities/neo4j-paragraph.entity";
-import { Neo4jPage } from "src/neo4j/entities/neo4j-page.entity";
 
 
 @Injectable()

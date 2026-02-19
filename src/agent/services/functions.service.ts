@@ -3,7 +3,6 @@ import { EmbeddingService } from "src/embedding/embedding.service";
 import { GraphInsertService } from "src/document/services/graph-insert.service";
 import { Function as GigachatFunction } from "gigachat/interfaces";
 import { ConfigService } from "@nestjs/config";
-import { NodeNotFoundError } from "src/neo4j/node-not-found.error";
 
 @Injectable()
 export class FunctionsService {

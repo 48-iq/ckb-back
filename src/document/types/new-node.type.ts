@@ -3,7 +3,6 @@ export type NewNode =  {
   name: string;
   data: string;
   type: NodeType;
-  semanticType: string;
   embedding: number[];
   parentId: string;
 } & Record<string, string>;
