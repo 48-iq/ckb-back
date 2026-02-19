@@ -5,7 +5,7 @@ import { User } from "src/postgres/entities/user.entity";
 import { Repository } from "typeorm";
 import { ChatMapper } from "../mappers/chat.mapper";
 import { Message } from "src/postgres/entities/message.entity";
-import { AppError } from "src/shared/errors/app.error";
+import { AppError } from "src/errors/app.error";
 import { WsGateway } from "src/ws/ws.gateway";
 import { MessageMapper } from "../mappers/message.mapper";
 import { CursorDto } from "../../shared/dto/cursor.dto";

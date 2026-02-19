@@ -1,0 +1,3 @@
+export type SplitDocument = {
+  tables: 
+}

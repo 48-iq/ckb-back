@@ -1,9 +1,9 @@
 import { Global, Module } from "@nestjs/common";
-import { GigachatProvider } from "./gigachat.provider";
+import { GigachatService } from "./gigachat.service";
 
 @Global()
 @Module({
-  providers: [GigachatProvider],
-  exports: [GigachatProvider]
+  providers: [GigachatService],
+  exports: [GigachatService]
 }) 
 export class GigaChatModule {}

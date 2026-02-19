@@ -3,7 +3,7 @@ import { ConnectedSocket, MessageBody, OnGatewayConnection, OnGatewayDisconnect,
 import { Server, Socket } from "socket.io";
 import { EventType } from "./event-type.type";
 import { JwtService } from "src/auth/services/jwt.service";
-import { AppError } from "src/shared/errors/app.error";
+import { AppError } from "src/errors/app.error";
 
 @WebSocketGateway()
 export class WsGateway implements OnGatewayDisconnect {

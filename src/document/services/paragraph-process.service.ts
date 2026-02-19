@@ -1,19 +1,15 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { ProcessedPage } from "../types/processed-page.entity";
-import { InjectGigachat } from "src/gigachat/gigachat.decorator";
 import GigaChat from "gigachat";
 import z from "zod";
 import { ConfigService } from "@nestjs/config";
-import { AppError } from "src/shared/errors/app.error";
-import { EmbeddingService } from "src/embedding/embedding.service";
-import { ProcessedDocument } from "../types/processed-document.entity";
+import { AppError } from "src/errors/app.error";
 import { Message } from "gigachat/interfaces";
 
 
 @Injectable()
-export class DocumentProcessService {
+export class ParagraphProcessService {
 
-  private readonly logger = new Logger(DocumentProcessService.name);
+  private readonly logger = new Logger(ParagraphProcessService.name);
 
   private readonly schema = z.object({
     name: z.string(),

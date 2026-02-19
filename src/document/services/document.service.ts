@@ -5,14 +5,14 @@ import { GraphInsertService } from "src/document/services/graph-insert.service";
 import { Contract } from "src/postgres/entities/contract.entity";
 import { DataSource, Repository } from "typeorm";
 import { Document } from "src/postgres/entities/document.entity";
-import { DocumentConvertService } from "./document-convert.service";
-import { MinioRepository } from "src/minio/minio.repository";
-import { DocumentProcessService } from "./document-process.service";
+import { FileConvertService } from "./file-convert.service";
+import { S3Service } from "src/document/services/s3.service";
+import { ParagraphProcessService } from "./paragraph-process.service";
 import { DocumentSplitService } from "./document-spit.service";
 import { DocumentEmbedService } from "./document-embed.service";
 import { DocumentMapper } from "../mappers/document.mapper";
 import { JwtService } from "src/auth/services/jwt.service";
-import { AppError } from "src/shared/errors/app.error";
+import { AppError } from "src/errors/app.error";
 import { User } from "src/postgres/entities/user.entity";
 import { CursorMapper } from "src/shared/mappers/cursor.mapper";
 import { WsGateway } from "src/ws/ws.gateway";
@@ -28,9 +28,9 @@ export class DocumentService {
     @InjectRepository(Document) private readonly documentRepository: Repository<Document>, 
     @InjectRepository(Contract) private readonly contractRepository: Repository<Contract>,
     private readonly neo4jRepository: GraphInsertService,
-    private readonly documentConvertService: DocumentConvertService,
-    private readonly minioRepository: MinioRepository,
-    private readonly documentProcessService: DocumentProcessService,
+    private readonly documentConvertService: FileConvertService,
+    private readonly minioRepository: S3Service,
+    private readonly documentProcessService: ParagraphProcessService,
     private readonly documentSplitService: DocumentSplitService,
     private readonly dataSource: DataSource,
     private readonly documentEmbedService: DocumentEmbedService,

@@ -1,11 +1,9 @@
 import { Module } from "@nestjs/common";
 import { DocumentMapper } from "./mappers/document.mapper";
 import { DocumentService } from "./services/document.service";
-import { DocumentSplitService } from "./services/document-spit.service";
-import { DocumentProcessService } from "./services/document-process.service";
-import { DocumentConvertService } from "./services/document-convert.service";
+import { ParagraphProcessService } from "./services/paragraph-process.service";
+import { FileConvertService } from "./services/file-convert.service";
 import { DocumentController } from "./document.controller";
-import { EmbeddingModule } from "src/embedding/embedding.module";
 import { Neo4jModule } from "src/neo4j/neo4j.module";
 import { MinioModule } from "src/minio/minio.module";
 import { TypeOrmModule } from "@nestjs/typeorm";
@@ -15,12 +13,13 @@ import { DocumentEmbedService } from "./services/document-embed.service";
 import { AuthModule } from "src/auth/auth.module";
 import { User } from "src/postgres/entities/user.entity";
 import { WsModule } from "src/ws/ws.module";
+import { GigaChatModule } from "src/gigachat/gigachat.module";
 
 
 
 @Module({
   imports: [
-    EmbeddingModule, 
+    GigaChatModule,
     Neo4jModule, 
     MinioModule,
     TypeOrmModule.forFeature([Document, Contract, User]),
@@ -30,9 +29,8 @@ import { WsModule } from "src/ws/ws.module";
   providers: [
     DocumentMapper, 
     DocumentService, 
-    DocumentSplitService, 
-    DocumentProcessService, 
-    DocumentConvertService,
+    ParagraphProcessService, 
+    FileConvertService,
     DocumentEmbedService
   ],
   exports: [DocumentMapper],

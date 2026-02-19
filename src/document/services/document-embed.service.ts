@@ -1,10 +1,4 @@
 import { Injectable } from "@nestjs/common";
-import { EmbeddingService } from "src/embedding/embedding.service";
-import { ProcessedDocument } from "../types/processed-document.entity";
-import { ProcessedPage } from "../types/processed-page.entity";
-import { ProcessedParagraph } from "../types/processed-paragraph.entity";
-import { ProcessedFact } from "../types/processed-fact.entity";
-import { ProcessedEntity } from "../types/processed-entity.entity";
 
 
 @Injectable()

@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import bcrypt from "bcryptjs";
-import { AppError } from "src/shared/errors/app.error";
+import { AppError } from "src/errors/app.error";
 
 @Injectable()
 export class PasswordService {

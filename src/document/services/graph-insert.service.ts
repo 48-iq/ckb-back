@@ -57,7 +57,7 @@ export class GraphInsertService implements OnApplicationShutdown, OnApplicationB
         additionalFields += `SET n.${key} = $${key}`;
       }
     }
-    const result = await tx.run<{id: string, data: string, type: NodeType, name: string}>(`
+    const result = await tx.run<{ id: string }>(`
       MERGE (n:${node.type} {data: $data, type: $type})
       ON CREATE SET 
         n.id = $id,
@@ -74,7 +74,7 @@ export class GraphInsertService implements OnApplicationShutdown, OnApplicationB
         node.parentId
       );
     };
-    return result.records.map(r => {r.get("id").low})[0];
+    return result.records.map(r => {r.get("id")})[0];
   }
 
   async saveDocument(nodes: {

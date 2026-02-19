@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { JwtService } from "./jwt.service";
 import { SignInDto } from "../dto/sign-in.dto";
-import { AppError } from "src/shared/errors/app.error";
+import { AppError } from "src/errors/app.error";
 import { PasswordService } from "./password.service";
 import { InjectRepository } from "@nestjs/typeorm";
 import { User } from "src/postgres/entities/user.entity";
