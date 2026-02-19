@@ -4,6 +4,8 @@ import z from "zod";
 import { ConfigService } from "@nestjs/config";
 import { AppError } from "src/errors/app.error";
 import { Message } from "gigachat/interfaces";
+import { GigachatService } from "src/gigachat/gigachat.service";
+import { UuidService } from "./uuid.service";
 
 
 @Injectable()
@@ -13,15 +15,12 @@ export class ParagraphProcessService {
 
   private readonly schema = z.object({
     name: z.string(),
-    paragraphs: z.array(z.object({
+    text: z.string(),
+    facts: z.array(z.object({
       name: z.string(),
       text: z.string(),
-      facts: z.array(z.object({
-        name: z.string(),
-        text: z.string(),
-        entities: z.array(z.object({
-          name: z.string()
-        }))
+      entities: z.array(z.object({
+        name: z.string()
       }))
     }))
   });
@@ -29,21 +28,16 @@ export class ParagraphProcessService {
   private readonly maxParseRetry: number;
 
   constructor(
-    @InjectGigachat() private readonly gigachat: GigaChat,
+    private readonly gigachatService: GigachatService,
     private readonly configService: ConfigService,
-    private readonly embeddingService: EmbeddingService
+    private readonly uuidService: UuidService
   ) {
-    this.maxParseRetry = +(this.configService.get<string>('MAX_PARSE_RETRY') || '5');
+    this.maxParseRetry = +this.configService.getOrThrow<string>('MAX_PARSE_RETRY');
   }
 
-  async processDocument(args: {
-    contract: {
-      name: string
-    },
-    postgresId: string,
-    name: string,
-    pages: string[]
-  }): Promise<ProcessedDocument> {
+  async processParagraphs(args: {
+    paragraphs: string[]
+  }): Promise<> {
     const { contract, name, pages, postgresId } = args;
 
     const count = pages.length;
@@ -69,43 +63,43 @@ export class ParagraphProcessService {
     }
   }
 
-  delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+  private async processParagraph(paragraph: string) {
+
   }
 
-  private async processPage(page1: string, page2?: string): Promise<ProcessedPage> {
+//   private async processPage(page1: string, page2?: string): Promise<ProcessedPage> {
 
-    const messages: Message[] = [
-      {role: "system", content: SYSTEM_PROMPT},
-      {
-        role: "user", 
-        content: `=====PAGE 1=====\n` + 
-          `${page1}` + 
-          `${page2?"\n=====PAGE 2=====\n":""}`  +
-          `${page2?page2:""}`}
-    ]
-    for (let i = 0; i < this.maxParseRetry; i++) {
-      try {
-        const response = await this.gigachat.chat({
-          messages: messages,
-          temperature: 0
-        });
-        const message = response.choices.at(0)?.message;
-        messages.push(message? message : {role: "assistant", content: ""});
-        const result = this.schema.parse(JSON.parse(message?.content??''));
-        this.logger.log(`Page parsed`);
-        return {
-          ...result,
-          text: page1
-        };
-      } catch (e) {
-        messages.push({role: "user", content: RETRY_PROMPT});
-        continue;
-      }
-    }
-    throw new AppError("DOCUMENT_PARSE_ERROR");
-  }
-}
+//     const messages: Message[] = [
+//       {role: "system", content: SYSTEM_PROMPT},
+//       {
+//         role: "user", 
+//         content: `=====PAGE 1=====\n` + 
+//           `${page1}` + 
+//           `${page2?"\n=====PAGE 2=====\n":""}`  +
+//           `${page2?page2:""}`}
+//     ]
+//     for (let i = 0; i < this.maxParseRetry; i++) {
+//       try {
+//         const response = await this.gigachat.chat({
+//           messages: messages,
+//           temperature: 0
+//         });
+//         const message = response.choices.at(0)?.message;
+//         messages.push(message? message : {role: "assistant", content: ""});
+//         const result = this.schema.parse(JSON.parse(message?.content??''));
+//         this.logger.log(`Page parsed`);
+//         return {
+//           ...result,
+//           text: page1
+//         };
+//       } catch (e) {
+//         messages.push({role: "user", content: RETRY_PROMPT});
+//         continue;
+//       }
+//     }
+//     throw new AppError("DOCUMENT_PARSE_ERROR");
+//   }
+// }
 
 const RETRY_PROMPT = `
 ###

@@ -8,7 +8,6 @@ import { Document } from "src/postgres/entities/document.entity";
 import { FileConvertService } from "./file-convert.service";
 import { S3Service } from "src/document/services/s3.service";
 import { ParagraphProcessService } from "./paragraph-process.service";
-import { DocumentSplitService } from "./document-spit.service";
 import { DocumentEmbedService } from "./document-embed.service";
 import { DocumentMapper } from "../mappers/document.mapper";
 import { JwtService } from "src/auth/services/jwt.service";
@@ -145,7 +144,7 @@ export class DocumentService {
       
       const pages = await this.documentSplitService.splitToPages(pdfBuffer);
       
-      const ProcessedDocument = await this.documentProcessService.processDocument({
+      const ProcessedDocument = await this.documentProcessService.processParagraphs({
         contract: { name: document.contract.title },
         postgresId: document.id,
         name: document.title,
