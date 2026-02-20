@@ -6,7 +6,6 @@ import { AuthModule } from './auth/auth.module'
 import { SharedModule } from './shared/shared.module'
 import { AgentModule } from './agent/agent.module'
 import { GigaChatModule } from './gigachat/gigachat.module'
-import { EmbeddingModule } from './embedding/embedding.module'
 import { Neo4jModule } from './neo4j/neo4j.module'
 import { DocumentModule } from './document/document.module'
 import { WsModule } from './ws/ws.module'
@@ -39,7 +38,6 @@ import { ScheduleModule } from '@nestjs/schedule';
     SharedModule,
     AgentModule,
     GigaChatModule,
-    EmbeddingModule,
     Neo4jModule,
     DocumentModule,
     WsModule

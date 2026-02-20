@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common";
 import { DocumentMapper } from "./mappers/document.mapper";
 import { DocumentService } from "./services/document.service";
-import { ParagraphProcessService } from "./services/paragraph-process.service";
+import { ParagraphAnalyzeService } from "./services/paragraph-analyze.service";
 import { FileConvertService } from "./services/file-convert.service";
 import { DocumentController } from "./document.controller";
 import { Neo4jModule } from "src/neo4j/neo4j.module";
@@ -29,7 +29,7 @@ import { GigaChatModule } from "src/gigachat/gigachat.module";
   providers: [
     DocumentMapper, 
     DocumentService, 
-    ParagraphProcessService, 
+    ParagraphAnalyzeService, 
     FileConvertService,
     DocumentEmbedService
   ],

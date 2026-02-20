@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { pipe, gotenberg, convert, office, please, Source, adjust } from 'gotenberg-js-client'
-import { IncorrectTypeError } from '../errors/incorrect-type.error';
 import Bottleneck from 'bottleneck';
+import { AppError } from 'src/errors/app.error';
 
 @Injectable()
 export class FileConvertService {
@@ -40,12 +40,12 @@ export class FileConvertService {
   private async fileToPdfRequest(file: Buffer, type: string): Promise<Buffer> {
     
     if (type === '.pdf') {
-      throw new IncorrectTypeError('File is already in PDF format');
+      throw new AppError("INCORRECT_FILETYPE", { message: "File is already PDF" });
     } else if (
       type !== '.doc' &&
       type !== '.docx'
     ) {
-      throw new Error(`Unsupported file type: ${type}, only .doc, .docx are supported`);
+      throw new AppError("INCORRECT_FILETYPE", { message: "Unsupported file type" });
     }
 
     this.logger.debug(`Converting file to PDF, type: ${type}, size: ${file.length} bytes`);

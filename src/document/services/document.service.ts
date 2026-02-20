@@ -1,22 +1,17 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
 import { InjectRepository } from "@nestjs/typeorm";
-import { GraphInsertService } from "src/document/services/graph-insert.service";
 import { Contract } from "src/postgres/entities/contract.entity";
 import { DataSource, Repository } from "typeorm";
 import { Document } from "src/postgres/entities/document.entity";
-import { FileConvertService } from "./file-convert.service";
 import { S3Service } from "src/document/services/s3.service";
-import { ParagraphProcessService } from "./paragraph-process.service";
-import { DocumentEmbedService } from "./document-embed.service";
 import { DocumentMapper } from "../mappers/document.mapper";
-import { JwtService } from "src/auth/services/jwt.service";
 import { AppError } from "src/errors/app.error";
 import { User } from "src/postgres/entities/user.entity";
 import { CursorMapper } from "src/shared/mappers/cursor.mapper";
 import { WsGateway } from "src/ws/ws.gateway";
 import Stream from "node:stream";
-import { Cron, CronExpression } from "@nestjs/schedule";
+import { NewNode } from "../types/new-node.type";
+import { GigachatService } from "src/gigachat/gigachat.service";
 
 @Injectable()
 export class DocumentService {
@@ -26,16 +21,12 @@ export class DocumentService {
   constructor(
     @InjectRepository(Document) private readonly documentRepository: Repository<Document>, 
     @InjectRepository(Contract) private readonly contractRepository: Repository<Contract>,
-    private readonly neo4jRepository: GraphInsertService,
-    private readonly documentConvertService: FileConvertService,
-    private readonly minioRepository: S3Service,
-    private readonly documentProcessService: ParagraphProcessService,
-    private readonly documentSplitService: DocumentSplitService,
+    private readonly s3Service: S3Service,
     private readonly dataSource: DataSource,
-    private readonly documentEmbedService: DocumentEmbedService,
     private readonly documentMapper: DocumentMapper,
     private readonly cursorMapper: CursorMapper,
-    private readonly wsGateway: WsGateway
+    private readonly wsGateway: WsGateway,
+    private readonly gigachatService: GigachatService
   ) {}
 
   async saveDocument(args: {
@@ -44,154 +35,73 @@ export class DocumentService {
     documentTitle: string,
     userId: string
   }) {
-    const { file, contractTitle, documentTitle, userId } = args;
-
-    let contract = await this.contractRepository.findOneBy({ title: contractTitle });
-
-    const filetype = file.originalname.endsWith('.doc')? '.doc':
-      file.originalname.endsWith('.docx')? '.docx':
-      file.originalname.endsWith('.pdf')? '.pdf':
-      undefined;
-
-    if (!filetype) throw new AppError("INCORRECT_DOCUMENT_FORMAT");
-
-    const isExists = await this.documentRepository  
+    const { file, contractTitle, documentTitle, userId } = args; 
+    const isExists = await this.documentRepository
       .createQueryBuilder('document')
-      .select('document')
       .where('document.title = :title', { title: documentTitle })
-      .andWhere('document.status != :status', { status: 'error' })
-      .getExists()
-
+      .andWhere('document')
+      .getExists();
+    
     if (isExists) {
       throw new AppError("DOCUMENT_ALREADY_EXISTS");
     }
 
+    const user = await this.dataSource
+      .getRepository(User)
+      .createQueryBuilder('user')
+      .where('user.id = :userId', { userId })
+      .getOne();
+
+    if (!user) {
+      throw new AppError("USER_NOT_FOUND");
+    }
+
+    let contract = await this.contractRepository
+      .createQueryBuilder('contract')
+      .where('contract.title = :title', { title: contractTitle })
+      .getOne();
+
     if (!contract) {
       contract = new Contract();
-      contract.title = args.contractTitle;
+      contract.title = contractTitle;
       contract = await this.contractRepository.save(contract);
     }
 
     let document = new Document();
-
-    document.contract = contract;
     document.title = documentTitle;
-    document.status = "awaiting";
-    document.initialType = filetype;
-    document = await this.documentRepository.save(document); 
+    document.contract = contract;
+    document.user = user;
+    document = await this.documentRepository.save(document);
 
-    try {
-      await this.minioRepository.saveUnprocessedDocument(file.buffer, document.id);
-  
-      this.wsGateway.sendEventToAll(
-        "documentCreated", 
-        this.documentMapper.toDto(document),
-      );
-    } catch(e) {
-      this.logger.error(e);
-      document.status = 'error';
-      await this.documentRepository.save(document);
-      
-      this.wsGateway.sendEventToAll(
-        'documentUpdated',
-        this.documentMapper.toDto(document),
-      )
-    }
+    this.s3Service.saveDocument(file.buffer, `${document.id}.pdf`);
+
+    
+
 
   }
 
-  @Cron(CronExpression.EVERY_10_SECONDS)
-  async processDocument() {
-    const document = await this.documentRepository
-      .createQueryBuilder('document')
-      .select('document')
-      .leftJoinAndSelect('document.contract', 'contract')
-      .where('document.status = :status', { status: 'awaiting' })
-      .orderBy('document.createdAt', 'ASC')
-      .getOne();
+  private async documentToNewNode(document: Document): Promise<NewNode> {
+    const embedding = await this.gigachatService.embedding(document.title);
 
-    if (!document) return;
-    try {
-      document.status = 'parsing';
-  
-      await this.documentRepository.save(document);
-  
-      this.wsGateway.sendEventToAll(
-        'documentUpdated',
-        this.documentMapper.toDto(document),
-      )
-  
-      const initialFileStream = await this.minioRepository.getUnprocessedDocument(document.id);
-      const initialFileBuffer = await this.streamToBuffer(initialFileStream);
-  
-      let pdfBuffer = initialFileBuffer;
-      
-      if (document.initialType !== '.pdf') {
-        pdfBuffer = await this.documentConvertService.fileToPdf(
-          initialFileBuffer, 
-          `${document.id}${document.initialType}`
-        );
-      }
-  
-      document.status = 'processing';
-  
-      await this.documentRepository.save(document);
-  
-      this.wsGateway.sendEventToAll(
-        'documentUpdated',
-        this.documentMapper.toDto(document),
-      )
-      
-      const pages = await this.documentSplitService.splitToPages(pdfBuffer);
-      
-      const ProcessedDocument = await this.documentProcessService.processParagraphs({
-        contract: { name: document.contract.title },
-        postgresId: document.id,
-        name: document.title,
-        pages
-      });
-  
-      document.status = 'embedding';
-  
-      await this.documentRepository.save(document);
-  
-      this.wsGateway.sendEventToAll(
-        'documentUpdated',
-        this.documentMapper.toDto(document),
-      );
-  
-      const neo4jDocument = await this.documentEmbedService.embedDocument(ProcessedDocument);
-  
-      document.status = 'saving';
-  
-      await this.documentRepository.save(document);
-  
-      this.wsGateway.sendEventToAll(
-        'documentUpdated',
-        this.documentMapper.toDto(document),
-      );
-      
-      await this.neo4jRepository.saveDocument(neo4jDocument);
-  
-      this.minioRepository.saveDocument(pdfBuffer, `${document.id}.pdf`);
-  
-      document.status = 'ready';
-  
-      await this.documentRepository.save(document);
-  
-      this.wsGateway.sendEventToAll(
-        'documentUpdated',
-        this.documentMapper.toDto(document),
-      );    
-    } catch(e) {
-      this.logger.error(e);
-      document.status = 'error';
-      await this.documentRepository.save(document);
-      this.wsGateway.sendEventToAll(
-        'documentUpdated',
-        this.documentMapper.toDto(document),
-      );
+    return {
+      id: document.id,
+      data: document.title,
+      type: "Document"
     }
+  }
+
+  private sendCreate(document: Document) {
+    this.wsGateway.sendEventToAll(
+      'documentCreated',
+      this.documentMapper.toDto(document),
+    );
+  }
+
+  private sendUpdate(document: Document) {
+    this.wsGateway.sendEventToAll(
+      'documentUpdated',
+      this.documentMapper.toDto(document),
+    );
   }
 
   private async streamToBuffer(stream: Stream.Readable): Promise<Buffer> {
@@ -235,7 +145,7 @@ export class DocumentService {
       if (!documentName.endsWith('.pdf')) throw new AppError("DOCUMENT_NOT_FOUND");
       if (!documentId) throw new AppError("DOCUMENT_NOT_FOUND");
 
-      const document = await this.minioRepository.getDocument(documentName);
+      const document = await this.s3Service.getDocument(documentName);
       return document;
     } catch (e) {
       this.logger.error(e);

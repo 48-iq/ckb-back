@@ -1,6 +1,7 @@
 import { Column, CreateDateColumn, Entity, ManyToMany, ManyToOne, PrimaryGeneratedColumn } from "typeorm"
 import { Message } from "./message.entity"
 import { Contract } from "./contract.entity";
+import { User } from "./user.entity";
 
 
 @Entity({name: 'documents'})
@@ -27,6 +28,8 @@ export class Document {
   @CreateDateColumn({type: 'timestamp', default: () => "CURRENT_TIMESTAMP(6)"})
   createdAt: Date;
 
+  @ManyToOne(() => User, { eager: true })
+  user: User
 }
 
 export type DocumentStatus = "awaiting" | "parsing" | "processing" | "embedding" | "saving" | "ready" | "error";
